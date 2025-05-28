@@ -72,7 +72,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.elementAt(2, 2)).getOrThrow()).toEqual(9)
+            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(2, 2)).getOrThrow()).toEqual(9)
         })
 
         test("should retrieve element values when dimensions are valid (0, 0)", () => {
@@ -82,7 +82,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.elementAt(0, 0)).getOrThrow()).toEqual(1)
+            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(0, 0)).getOrThrow()).toEqual(1)
         })
 
         test("should retrieve element values when dimensions are valid (0, 2)", () => {
@@ -92,7 +92,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.elementAt(0, 2)).getOrThrow()).toEqual(3)
+            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(0, 2)).getOrThrow()).toEqual(3)
         })
 
         test("should retrieve element values when dimensions are valid (3, 0)", () => {
@@ -102,7 +102,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.elementAt(3, 0)).getOrThrow()).toEqual(10)
+            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(3, 0)).getOrThrow()).toEqual(10)
         })
 
         test("should retrieve element values when dimensions are valid (3, 2)", () => {
@@ -112,7 +112,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.elementAt(3, 2)).getOrThrow()).toEqual(12)
+            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(3, 2)).getOrThrow()).toEqual(12)
         })
 
         test("should retrieve row at row index", () => {
@@ -122,7 +122,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
+            expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
         })
 
         test("should not retrieve row if the row index is out of bounds", () => {
@@ -132,7 +132,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.rowSlice(10)).failed).toBe(true)
+            expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(10)).failed).toBe(true)
         })
 
         test("should retrieve column at column index", () => {
@@ -142,7 +142,7 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ])
-            expect(result.andThen((df: DataFrame<number>) => df.columnSlice(1)).getOrThrow()).toEqual([2, 5, 8, 11])
+            expect(result.flatMap((df: DataFrame<number>) => df.columnSlice(1)).getOrThrow()).toEqual([2, 5, 8, 11])
         })
 
         test("should be able to retrieve all the columns as slices", () => {
