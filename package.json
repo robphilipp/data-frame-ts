@@ -1,0 +1,38 @@
+{
+  "name": "data-frame-ts",
+  "version": "0.0.1-snapshot",
+  "description": "typescript DataFrame",
+  "author": "Rob Philipp",
+  "homepage": "https://github.com/robphilipp/data-frame-ts",
+  "license": "MIT",
+  "repository": "github:robphilipp/data-frame-ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "tsc",
+    "test": "jest DataFrame.test.ts"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "dependencies": {
+    "result-fn": "^0.1.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.5.3"
+  }
+}
+
