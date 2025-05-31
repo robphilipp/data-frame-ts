@@ -205,16 +205,6 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     }
 
     /**
-     * Finds the unique tag with the specified name and coordinate.
-     * @param name The tag's name
-     * @param coordinate The tag's coordinate
-     * @return A Result containing the unique tag if exactly one is found, or an error message if none or multiple are found
-     */
-    public tagFor(name: string, coordinate: C): Result<Tag<T, C>, string> {
-        return this.uniqueTagFor(name, coordinate).map(tag => tag)
-    }
-
-    /**
      * Finds the ID of the unique tag with the specified name and coordinate.
      * @param name The tag's name
      * @param coordinate The tag's coordinate
@@ -226,20 +216,95 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
 
     /**
      * Adds a new tag with the specified name, value, and coordinate if it doesn't already exist.
-     * If a tag with the same name and coordinate already exists, returns that tag.
+     *
+     * If the tag is added successfully, then returns a {@link Result} holding the updated {@link Tags} object.
+     * If the tag could not be added, then returns a failure result with a message indicating the reason for the failure.
+     *
      * @param name The tag's name
      * @param value The tag's value
      * @param coordinate The tag's coordinate
-     * @return The a new {@link Tags} object
+     * @return The a {@link Result} holding the updated {@link Tags} object or a failure message if the tag could not be added.
+     * @see replace
+     * @see addOrReplace
+     *
+     * @example
+     * ```typescript
+     * const result = Tags.empty<number, CellCoordinate>().add("name", 314, CellCoordinate.of(0, 0))
+     * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
+     * ```
      */
-    public add(name: string, value: T, coordinate: C): Tags<T, C> {
+    public add(name: string, value: T, coordinate: C): Result<Tags<T, C>, string> {
         const tagsObject: Tags<T, C> = this.copy()
-        return this.tagFor(name, coordinate)
-            .map((_) => tagsObject)
-            .getOr(() => {
-                tagsObject.tags.push(newTag(name, value, coordinate))
-                return tagsObject
-            })
+        if (this.hasTagFor(name, coordinate)) {
+            return failureResult(
+                `(Tags::add) Cannot add tag because a tag with the same name and coordinate already exists; ` +
+                `name: ${name}, coordinate: ${coordinate.toString()}`
+            )
+        }
+        tagsObject.tags.push(newTag(name, value, coordinate))
+        return successResult(tagsObject)
+    }
+
+    /**
+     * Replaces the tag with the specified name and coordinate with a new tag with the specified value.
+     * <p>
+     * If a tag with the same name and coordinate exists, then replaces the tag and returns a {@link Result}
+     * holding the updated {@link Tags} object.
+     * <p>
+     * If no tag with the same name and coordinate exists, then returns a failure result with a message
+     * indicating the reason for the failure.
+     *
+     * @param name The tag's name
+     * @param value The tag's value
+     * @param coordinate The tag's coordinate
+     * @return The a {@link Result} holding the updated {@link Tags} object or a failure message if the tag could not be replaced.
+     * @see add
+     * @see addOrReplace
+     *
+     * @example
+     * ```typescript
+     * let result = Tags.empty<number, CellCoordinate>().add("name", 314, CellCoordinate.of(0, 0))
+     * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
+     *
+     * result = Tags.empty<number, CellCoordinate>().replace("name", 314159, CellCoordinate.of(0, 0))
+     * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
+     * expect(result.map(tags => tags.uniqueTagFor("name", CellCoordinate.of(0, 0)).map(tag => tag.value).getOrDefault(0))).toBe(314159)
+     *
+     * result = Tags.empty<number, CellCoordinate>().replace("no-name", 314, CellCoordinate.of(0, 0))
+     * expect(result.failed).toBe(true)
+     * ```
+     */
+    public replace(name: string, value: T, coordinate: C): Result<Tags<T, C>, string> {
+        const tagsObject: Tags<T, C> = this.copy()
+        if (!this.hasUniqueTagFor(name, coordinate)) {
+            return failureResult(
+                `(Tags::replace) Cannot replace tag because no unique tag with name and coordinate was found; ` +
+                `name: ${name}, coordinate: ${coordinate.toString()}`
+            )
+        }
+        const index = tagsObject.tags.findIndex(tag => tag.name === name && tag.coordinate.equals(coordinate))
+        tagsObject.tags[index] = newTag(name, value, coordinate)
+        return successResult(tagsObject)
+    }
+
+    /**
+     * Adds a new tag with the specified name, value, and coordinate if it doesn't already exist. If the tag
+     * already exists, then replaces the tag with a new tag using the specified specified name, value, and coordinate.
+     *
+     * This is a convenience function in cases where the more string {@link add} and {@link replace} methods are not
+     * necessary.
+     * @param name The tag's name
+     * @param value The tag's value
+     * @param coordinate The tag's coordinate
+     * @return An updated copy of the {@link Tags} object.
+     * @see add
+     * @see replace
+     */
+    public addOrReplace(name: string, value: T, coordinate: C): Tags<T, C> {
+        const tagsObject: Tags<T, C> = this.copy()
+        return tagsObject.add(name, value, coordinate)
+            .mapFailure(_ => tagsObject.replace(name, value, coordinate))
+            .getOrDefault(tagsObject)
     }
 
     /**

@@ -448,4 +448,124 @@ describe("Testing data-frame behavior", () => {
             expect(dataFrame).toEqual(updated)
         })
     })
+
+    describe("Testing tagging functionality", () => {
+        test("should be able to tag a row", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagRow(1, "row-tag", "row-value").getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(result).toBeDefined()
+            expect(result.rowCount()).toBe(3)
+            expect(result.columnCount()).toBe(3)
+        })
+
+        test("should return error when tagging row with invalid index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagRow(5, "row-tag", "row-value")
+
+            expect(result.failed).toBe(true)
+            expect(result.error).toContain("Row index for row tag is out of bounds")
+        })
+
+        test("should be able to tag a column", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagColumn(1, "column-tag", "column-value").getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(result).toBeDefined()
+            expect(result.rowCount()).toBe(3)
+            expect(result.columnCount()).toBe(3)
+        })
+
+        test("should return error when tagging column with invalid index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagColumn(5, "column-tag", "column-value")
+
+            expect(result.failed).toBe(true)
+            expect(result.error).toContain("Column index for column tag is out of bounds")
+        })
+
+        test("should be able to tag a cell", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagCell(1, 2, "cell-tag", "cell-value").getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(result).toBeDefined()
+            expect(result.rowCount()).toBe(3)
+            expect(result.columnCount()).toBe(3)
+        })
+
+        test("should return error when tagging cell with invalid row index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagCell(5, 1, "cell-tag", "cell-value")
+
+            expect(result.failed).toBe(true)
+            expect(result.error).toContain("Row index for cell tag is out of bounds")
+        })
+
+        test("should return error when tagging cell with invalid column index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame.tagCell(1, 5, "cell-tag", "cell-value")
+
+            expect(result.failed).toBe(true)
+            expect(result.error).toContain("Column index for cell tag is out of bounds")
+        })
+
+        test("should be able to chain multiple tag operations", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+
+            const result = dataFrame
+                .tagRow(0, "row-tag", "row-value")
+                .getOrThrow()
+                .tagColumn(1, "column-tag", "column-value")
+                .getOrThrow()
+                .tagCell(2, 2, "cell-tag", "cell-value")
+                .getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(result).toBeDefined()
+            expect(result.rowCount()).toBe(3)
+            expect(result.columnCount()).toBe(3)
+        })
+    })
 })

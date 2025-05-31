@@ -429,7 +429,7 @@ export class DataFrame<V> {
             )
         }
         const rowCoordinate = RowCoordinate.of(rowIndex)
-        this.tags = this.tags.add(name, tag, rowCoordinate)
+        this.tags = this.tags.addOrReplace(name, tag, rowCoordinate)
         return successResult(this as DataFrame<V>)
     }
 
@@ -451,7 +451,7 @@ export class DataFrame<V> {
             )
         }
         const columnCoordinate = ColumnCoordinate.of(columnIndex)
-        this.tags = this.tags.add(name, tag, columnCoordinate)
+        this.tags = this.tags.addOrReplace(name, tag, columnCoordinate)
         return successResult(this as DataFrame<V>)
     }
 
@@ -478,7 +478,7 @@ export class DataFrame<V> {
                 `(DataFrame::tagCell) Column index for cell tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; `
             )
         }
-        this.tags = this.tags.add(name, tag, CellCoordinate.of(rowIndex, columnIndex))
+        this.tags = this.tags.addOrReplace(name, tag, CellCoordinate.of(rowIndex, columnIndex))
         return successResult(this as DataFrame<V>)
     }
 }
