@@ -6,7 +6,7 @@ import {
     newRowTag,
     newTag,
     RowCoordinate,
-    TagCoordinate, Tags
+    TagCoordinate, Tags, TagValue
 } from './tags'
 
 describe('tags', () => {
@@ -40,6 +40,22 @@ describe('tags', () => {
             expect(tags.length()).toBe(3)
             expect(updatedTags.length()).toBe(4)
         })
+
+        test("should remove duplicate tags, overwriting earlier ones with later ones", () => {
+            // This test requires creating a situation where multiple tags have the same name and coordinate
+            // This shouldn't normally happen with the Tags API, but we can test the error handling
+
+            // Create a Tags object with a manually constructed array containing duplicate tags
+            const tag1 = newRowTag<string>("duplicate", "value1", RowCoordinate.of(0))
+            const tag2 = newRowTag<string>("duplicate", "value2", RowCoordinate.of(0))
+            const tags = Tags.with<string>(tag1, tag2)
+
+            const result = tags.uniqueTagFor("duplicate", RowCoordinate.of(0))
+
+            expect(result.succeeded).toBe(true)
+            expect(result.map(tag => tag.value).getOrThrow()).toBe("value2")
+        });
+
     })
 
     describe('querying tags', () => {
@@ -139,36 +155,73 @@ describe('tags', () => {
                 );
 
                 const added = tags.replace("existing-tag", "new-value", RowCoordinate.of(0))
-                expect(added.map(tags => tags.hasUniqueTagFor("existing-tag", RowCoordinate.of(0))).getOrThrow()).toBe(true)
-                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")).getOrThrow()).toHaveLength(1)
-                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")[0].value).getOrThrow()).toBe("new-value")
+                expect(added.map(tags => tags.hasUniqueTagFor("existing-tag", RowCoordinate.of(0))).getOrThrow())
+                    .toBe(true)
+                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")).getOrThrow())
+                    .toHaveLength(1)
+                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")[0].value).getOrThrow())
+                    .toBe("new-value")
                 expect(tags.length()).toBe(1);
             });
 
             test("should add tag when it doesn't already exist when using addOrReplace", () => {
+                // add a set of new tags
+                const tags = Tags.empty<string, TagCoordinate>()
+                    .addOrReplace("test-tag-1", "test-value-1", RowCoordinate.of(0))
+                    .addOrReplace("test-tag-2", "test-value-2", RowCoordinate.of(0))
+                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(1))
+                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(2))
+
+                expect(tags.length()).toBe(4)
+                expect(tags.uniqueTagFor("test-tag-1", RowCoordinate.of(0)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-1")
+                expect(tags.uniqueTagFor("test-tag-2", RowCoordinate.of(0)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-2")
+                expect(tags.uniqueTagFor("test-tag-3", RowCoordinate.of(1)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-3")
+                expect(tags.uniqueTagFor("test-tag-3", RowCoordinate.of(2)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-3")
+
+                // replace each of the tags
+                const updated = tags
+                    .addOrReplace("test-tag-1", "test-value-11", RowCoordinate.of(0))
+                    .addOrReplace("test-tag-2", "test-value-21", RowCoordinate.of(0))
+                    .addOrReplace("test-tag-3", "test-value-31", RowCoordinate.of(1))
+                    .addOrReplace("test-tag-3", "test-value-32", RowCoordinate.of(2))
+
+                expect(updated.length()).toBe(4)
+                expect(tags.length()).toBe(4)
+                expect(updated.uniqueTagFor("test-tag-1", RowCoordinate.of(0)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-11")
+                expect(updated.uniqueTagFor("test-tag-2", RowCoordinate.of(0)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-21")
+                expect(updated.uniqueTagFor("test-tag-3", RowCoordinate.of(1)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-31")
+                expect(updated.uniqueTagFor("test-tag-3", RowCoordinate.of(2)).map(tag => tag.value).getOrThrow())
+                    .toBe("test-value-32")
 
             })
 
-            // test("should be able to remove a tag by ID", () => {
-            //     const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
-            //     const tags = Tags.with<string>(tag);
-            //
-            //     const removeResult = tags.remove(tag.id);
-            //
-            //     expect(removeResult.isSuccess()).toBe(true);
-            //     expect(removeResult.get().length()).toBe(0);
-            // });
-            //
-            // test("should return failure when removing non-existent tag ID", () => {
-            //     const tags = Tags.with<string>(
-            //         newRowTag("existing-tag", "value", RowCoordinate.of(0))
-            //     );
-            //
-            //     const removeResult = tags.remove("non-existent-id");
-            //
-            //     expect(removeResult.isSuccess()).toBe(false);
-            //     expect(removeResult.getError()).toContain("Unable to remove tag");
-            // });
+            test("should be able to remove a tag by ID", () => {
+                const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
+                const tags = Tags.with<string>(tag);
+
+                const removeResult = tags.remove(tag.id);
+
+                expect(removeResult.succeeded).toBe(true);
+                expect(removeResult.map(tags => tags.length()).getOrDefault(-1)).toBe(0);
+            });
+
+            test("should return failure when removing non-existent tag ID", () => {
+                const tags = Tags.with<string>(
+                    newRowTag("existing-tag", "value", RowCoordinate.of(0))
+                );
+
+                const removeResult = tags.remove("non-existent-id");
+
+                expect(removeResult.failed).toBe(true);
+                expect(removeResult.failureOrUndefined()).toContain("Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: non-existent-id");
+            });
 
             test("should correctly identify if a tag exists with hasTagFor", () => {
                 const tags = Tags.with<string>(
@@ -225,41 +278,27 @@ describe('tags', () => {
                 expect(tagsForCoord[1].name).toBe("tag2");
             });
 
-            // test("should find unique tag with uniqueTagFor", () => {
-            //     const tags = Tags.with<string>(
-            //         newRowTag("unique-tag", "value", RowCoordinate.of(0))
-            //     );
-            //
-            //     const result = tags.uniqueTagFor("unique-tag", RowCoordinate.of(0));
-            //
-            //     expect(result.isSuccess()).toBe(true);
-            //     expect(result.get().name).toBe("unique-tag");
-            //     expect(result.get().value).toBe("value");
-            // });
-            //
-            // test("should return failure when no tag found with uniqueTagFor", () => {
-            //     const tags = Tags.empty<string, TagCoordinate>();
-            //
-            //     const result = tags.uniqueTagFor("non-existent", RowCoordinate.of(0));
-            //
-            //     expect(result.isSuccess()).toBe(false);
-            //     expect(result.getError()).toContain("No tag with name");
-            // });
-            //
-            // test("should return failure when multiple tags found with uniqueTagFor", () => {
-            //     // This test requires creating a situation where multiple tags have the same name and coordinate
-            //     // This shouldn't normally happen with the Tags API, but we can test the error handling
-            //
-            //     // Create a Tags object with a manually constructed array containing duplicate tags
-            //     const tag1 = newRowTag("duplicate", "value1", RowCoordinate.of(0));
-            //     const tag2 = newRowTag("duplicate", "value2", RowCoordinate.of(0));
-            //     const tags = new Tags([tag1, tag2] as any); // Using 'as any' to bypass type checking
-            //
-            //     const result = tags.uniqueTagFor("duplicate", RowCoordinate.of(0));
-            //
-            //     expect(result.isSuccess()).toBe(false);
-            //     expect(result.getError()).toContain("Multiple tags with name");
-            // });
+            test("should find unique tag with uniqueTagFor", () => {
+                const tags = Tags.with<string>(
+                    newRowTag("unique-tag", "value", RowCoordinate.of(0))
+                );
+
+                const result = tags.uniqueTagFor("unique-tag", RowCoordinate.of(0))
+
+                expect(result.succeeded).toBe(true)
+                expect(result.map(tag => tag.name).getOrThrow()).toBe("unique-tag")
+                expect(result.map(tag => tag.value).getOrThrow()).toBe("value")
+            });
+
+            test("should return failure when no tag found with uniqueTagFor", () => {
+                const tags = Tags.empty<string, TagCoordinate>();
+
+                const result = tags.uniqueTagFor("non-existent", RowCoordinate.of(0));
+
+                expect(result.failed).toBe(true);
+                expect(result.failureOrUndefined())
+                    .toBe("No tag with specified name and coordinate found; name: non-existent; coordinate: (0, *)");
+            });
         })
     })
 })

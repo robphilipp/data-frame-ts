@@ -168,7 +168,18 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @return A new Tags instance containing the provided tags.
      */
     public static with<T extends TagValue>(...tag: Array<Tag<T, TagCoordinate>>): Tags<T, TagCoordinate> {
-        return new Tags<T, TagCoordinate>(tag)
+        // de-dup the list where elements later in the let overwrite earlier ones
+        // todo make this more efficient, kinda grody
+        const deDupedTags = tag.slice().reverse().reduce(
+            (accumulatedTags, currentTag) => {
+                if (!accumulatedTags.some(tg => tg.name === currentTag.name && tg.coordinate.equals(currentTag.coordinate))) {
+                    accumulatedTags.push(currentTag)
+                }
+                return accumulatedTags
+            },
+            [] as Array<Tag<T, TagCoordinate>>
+        )
+        return new Tags<T, TagCoordinate>(deDupedTags.reverse())
     }
 
     /**
@@ -289,7 +300,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
 
     /**
      * Adds a new tag with the specified name, value, and coordinate if it doesn't already exist. If the tag
-     * already exists, then replaces the tag with a new tag using the specified specified name, value, and coordinate.
+     * already exists, then replaces the tag with a new tag using the specified name, value, and coordinate.
      *
      * This is a convenience function in cases where the more string {@link add} and {@link replace} methods are not
      * necessary.
@@ -301,10 +312,10 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @see replace
      */
     public addOrReplace(name: string, value: T, coordinate: C): Tags<T, C> {
-        const tagsObject: Tags<T, C> = this.copy()
-        return tagsObject.add(name, value, coordinate)
-            .mapFailure(_ => tagsObject.replace(name, value, coordinate))
-            .getOrDefault(tagsObject)
+        if (this.hasTagFor(name, coordinate)) {
+            return this.replace(name, value, coordinate).getOrDefault(this.copy())
+        }
+        return this.add(name, value, coordinate).getOrDefault(this.copy())
     }
 
     /**
@@ -376,10 +387,10 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     public uniqueTagFor(name: string, coordinate: C): Result<Tag<T, C>, string> {
         const tags = this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate))
         if (tags.length === 0) {
-            return failureResult(`No tag with name ${name} found for coordinate ${coordinate.toString}`)
+            return failureResult(`No tag with specified name and coordinate found; name: ${name}; coordinate: ${coordinate.toString()}`)
         }
         if (tags.length > 1) {
-            return failureResult(`Multiple tags with name ${name} found for coordinate ${coordinate.toString}`)
+            return failureResult(`Multiple tags with specified name and coordinate found; name: ${name}; coordinate: ${coordinate.toString()}`)
         }
         return successResult(tags[0])
     }
