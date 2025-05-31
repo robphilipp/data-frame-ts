@@ -1,5 +1,5 @@
 import {failureResult, Result, successResult} from "result-fn";
-import {CellCoordinate, ColumnCoordinate, RowCoordinate, Tags, TagValue} from "./tags";
+import {CellCoordinate, ColumnCoordinate, RowCoordinate, TagCoordinate, Tags, TagValue} from "./tags";
 
 /**
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
@@ -13,9 +13,7 @@ export class DataFrame<V> {
     private readonly data: Array<V>
     private readonly numColumns: number
     private readonly numRows: number
-    private readonly rowTags: Tags<TagValue, RowCoordinate> = new Tags<TagValue, RowCoordinate>()
-    private readonly columnTags: Tags<TagValue, ColumnCoordinate> = new Tags<TagValue, ColumnCoordinate>()
-    private readonly cellTags: Tags<TagValue, CellCoordinate> = new Tags<TagValue, CellCoordinate>()
+    private tags: Tags<TagValue, TagCoordinate> = Tags.empty()
 
     /**
      * Constructs an instance of the class with the given data, number of rows, and number of columns.
@@ -413,8 +411,15 @@ export class DataFrame<V> {
         return successResult(this)
     }
 
-    /*
-        Tags
+    /**
+     * Tags a specific row in the DataFrame with a name-value pair.
+     * 
+     * @param rowIndex The index of the row to tag. Must be within the range [0, numRows).
+     * @param name The name of the tag to associate with the row.
+     * @param tag The value of the tag to associate with the row.
+     * @template T The type of the tag value, which must extend TagValue.
+     * @return A success result containing the updated DataFrame if the row index is valid,
+     * or a failure result containing an error message if the row index is invalid.
      */
     public tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
@@ -424,10 +429,20 @@ export class DataFrame<V> {
             )
         }
         const rowCoordinate = RowCoordinate.of(rowIndex)
-        this.rowTags.addTag(name, tag, rowCoordinate)
+        this.tags = this.tags.add(name, tag, rowCoordinate)
         return successResult(this as DataFrame<V>)
     }
 
+    /**
+     * Tags a specific column in the DataFrame with a name-value pair.
+     * 
+     * @param columnIndex The index of the column to tag. Must be within the range [0, numColumns).
+     * @param name The name of the tag to associate with the column.
+     * @param tag The value of the tag to associate with the column.
+     * @template T The type of the tag value, which must extend TagValue.
+     * @return A success result containing the updated DataFrame if the column index is valid,
+     * or a failure result containing an error message if the column index is invalid.
+     */
     public tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
             return failureResult(
@@ -436,10 +451,21 @@ export class DataFrame<V> {
             )
         }
         const columnCoordinate = ColumnCoordinate.of(columnIndex)
-        this.columnTags.addTag(name, tag, columnCoordinate)
+        this.tags = this.tags.add(name, tag, columnCoordinate)
         return successResult(this as DataFrame<V>)
     }
 
+    /**
+     * Tags a specific cell in the DataFrame with a name-value pair.
+     * 
+     * @param rowIndex The index of the row containing the cell to tag. Must be within the range [0, numRows).
+     * @param columnIndex The index of the column containing the cell to tag. Must be within the range [0, numColumns).
+     * @param name The name of the tag to associate with the cell.
+     * @param tag The value of the tag to associate with the cell.
+     * @template T The type of the tag value, which must extend TagValue.
+     * @return A success result containing the updated DataFrame if the indices are valid,
+     * or a failure result containing an error message if either index is invalid.
+     */
     public tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
             return failureResult(
@@ -452,7 +478,7 @@ export class DataFrame<V> {
                 `(DataFrame::tagCell) Column index for cell tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; `
             )
         }
-        this.cellTags.addTag(name, tag, CellCoordinate.of(rowIndex, columnIndex))
+        this.tags = this.tags.add(name, tag, CellCoordinate.of(rowIndex, columnIndex))
         return successResult(this as DataFrame<V>)
     }
 }
