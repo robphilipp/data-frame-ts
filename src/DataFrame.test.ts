@@ -9,8 +9,11 @@ describe("Testing data-frame behavior", () => {
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.succeeded).toBe(true)
+            ]).getOrThrow()
+            expect(result.rowCount()).toBe(4)
+            expect(result.columnCount()).toBe(3)
+            expect(result.elementAt(0, 0).getOrThrow()).toBe(1)
+            expect(result.elementAt(2, 2).getOrThrow()).toBe(9)
         })
 
         test("should not create a data-frame when dimensions are invalid", () => {
@@ -75,6 +78,33 @@ describe("Testing data-frame behavior", () => {
         })
     })
 
+    describe("Testing data-frame equality", () => {
+        const dataFrame_4_3 = DataFrame.from([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [10, 11, 12]
+        ]).getOrThrow()
+        const dataFrame_4_3_evens = dataFrame_4_3.mapElements(value => value * 2)
+        const dataFrame_4_4 = DataFrame.from([
+            [1, 2, 3, 31],
+            [4, 5, 6, 61],
+            [7, 8, 9, 91],
+            [10, 11, 12, 121]
+        ]).getOrThrow()
+
+        test("should be able to compare two data-frames", () => {
+            expect(dataFrame_4_3).not.toEqual(dataFrame_4_3_evens)
+            expect(dataFrame_4_3).not.toEqual(dataFrame_4_4)
+        })
+
+        test("a data-frame should be equal to itself", () => {
+            expect(dataFrame_4_3).toEqual(dataFrame_4_3)
+            expect(dataFrame_4_3_evens).toEqual(dataFrame_4_3_evens)
+            expect(dataFrame_4_4).toEqual(dataFrame_4_4)
+        })
+    })
+
     describe("Getting data from data-frames", () => {
 
         test("should get dimensions from a data-frame", () => {
@@ -89,13 +119,15 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should retrieve element values when dimensions are valid (2, 2)", () => {
-            const result = DataFrame.from([
-                [1, 2, 3],
-                [4, 5, 6],
-                [7, 8, 9],
-                [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(2, 2)).getOrThrow()).toEqual(9)
+            const value = DataFrame.from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12]
+                ])
+                .flatMap(dataFrame => dataFrame.elementAt(2, 2))
+                .getOrThrow()
+            expect(value).toEqual(9)
         })
 
         test("should retrieve element values when dimensions are valid (0, 0)", () => {
@@ -138,14 +170,29 @@ describe("Testing data-frame behavior", () => {
             expect(result.flatMap((df: DataFrame<number>) => df.elementAt(3, 2)).getOrThrow()).toEqual(12)
         })
 
-        test("should retrieve row at row index", () => {
-            const result = DataFrame.from([
+        test("should retrieve row slice at row index", () => {
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const slice = dataFrame.rowSlice(2).getOrThrow()
+            expect(slice).toEqual([7, 8, 9])
+
+            for (let i = 0; i < slice.length; i++) {
+                slice[i] = 10 * slice[i]
+            }
+            expect(slice).toEqual([70, 80, 90])
+            expect(dataFrame.rowSlice(2).getOrThrow()).toEqual([7, 8, 9])
+            // const result = DataFrame.from([
+            //     [1, 2, 3],
+            //     [4, 5, 6],
+            //     [7, 8, 9],
+            //     [10, 11, 12]
+            // ])
+            // expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
         })
 
         test("should not retrieve row if the row index is out of bounds", () => {
@@ -159,13 +206,20 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should retrieve column at column index", () => {
-            const result = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.columnSlice(1)).getOrThrow()).toEqual([2, 5, 8, 11])
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const slice = dataFrame.columnSlice(1).getOrThrow()
+            expect(slice).toEqual([2, 5, 8, 11])
+            for (let i = 0; i < slice.length; i++) {
+                slice[i] = 10 * slice[i]
+            }
+            expect(slice).toEqual([20, 50, 80, 110])
+            expect(dataFrame.columnSlice(1).getOrThrow()).toEqual([2, 5, 8, 11])
         })
 
         test("should be able to retrieve all the columns as slices", () => {
@@ -181,29 +235,65 @@ describe("Testing data-frame behavior", () => {
             expect(colSlices[2]).toEqual([3, 6, 9])
         })
 
-        test("copy should equal itself", () => {
+        test("should be able to retrieve all the rows as slices", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
-                [10, 11, 12]
+                [10, 11, 12],
             ]).getOrThrow()
+            const rowSlices: Array<Array<number>> = dataFrame.rowSlices()
+            expect(rowSlices.length).toEqual(4)
+            expect(rowSlices[0]).toEqual([1, 2, 3])
+            expect(rowSlices[1]).toEqual([4, 5, 6])
+            expect(rowSlices[2]).toEqual([7, 8, 9])
+            expect(rowSlices[3]).toEqual([10, 11, 12])
+        })
+
+        test("copy should equal itself", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const copied = dataFrame.copy()
-            expect(copied.equals(dataFrame)).toBe(true)
+            expect(copied).toEqual(dataFrame)
+
+            copied.setElementInPlaceAt(0, 0, 100)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+            expect(dataFrame).not.toEqual(copied)
         })
     })
 
     describe("Testing updates to the data-frame", () => {
         test("should be able to get an updated a data-frame without changing the original", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const updated = dataFrame.setElementAt(1, 3, 1000).getOrThrow()
             expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(true)
+        })
+
+        test("should be able to update a data-frame in-place", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const updated = dataFrame.setElementInPlaceAt(1, 3, 1000).getOrThrow()
+            expect(dataFrame).toEqual(updated)
+            expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
+            // updated in place, so the data-frame has changed
+            expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(false)
         })
 
         test("should be able to insert a row at beginning", () => {
@@ -227,14 +317,13 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to insert a row before end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
-            expect(updated.rowCount()).toEqual(5)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -242,19 +331,20 @@ describe("Testing data-frame behavior", () => {
                 [100, 200, 300],
                 [10, 11, 12]
             ]).getOrThrow()
+            const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
+            expect(updated.rowCount()).toEqual(5)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to insert a row at end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
-            expect(updated.rowCount()).toEqual(5)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -262,8 +352,10 @@ describe("Testing data-frame behavior", () => {
                 [10, 11, 12],
                 [100, 200, 300]
             ]).getOrThrow()
+            const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
+            expect(updated.rowCount()).toEqual(5)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to delete a row from front", () => {
@@ -396,6 +488,45 @@ describe("Testing data-frame behavior", () => {
             ]).getOrThrow()
             const transposed = dataFrame.transpose()
             expect(transposed).toEqual(expected)
+        })
+        
+        test("should be able to apply a map to each element in the data-frame", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const expected = DataFrame.from<string>([
+                ['1', '2', '3'],
+                ['4', '5', '6'],
+                ['7', '8', '9'],
+                ['10', '11', '12']
+            ]).getOrThrow()
+            const updated = dataFrame.mapElements<string>(value => (`${value}`))
+            expect(updated).toEqual(expected)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+        })
+
+        test("should be able to apply a map to each element in the data-frame based on its coordinates", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const expected = DataFrame.from<string>([
+                ['0', '1', '2'],
+                ['4', '6', '8'],
+                ['14', '17', '20'],
+                ['30', '34', '38']
+            ]).getOrThrow()
+            const updated = dataFrame
+                .mapElements<string>((value, row, column) => (`${value * row + column}`))
+            expect(updated).toEqual(expected)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
     })
 

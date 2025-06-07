@@ -5,9 +5,44 @@ import {CellCoordinate, ColumnCoordinate, RowCoordinate, TagCoordinate, Tags, Ta
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
  * and querying of tabular data in a row-major format. The `DataFrame` is immutable for
  * immutable objects. Modifications to the rows, columns, or elements will not modify the
- * original `DataFrame`, but rather return a modified copy of the `DataFrame`.
+ * original `DataFrame`, but rather return a modified copy of the `DataFrame`. However,
+ * there are a few functions, `setElementInPlaceAt`, `mapRowInPlace, and `mapColumnInPlace`
+ * that mutate the data-frame. Using these "in-place" methods is discouraged but are
+ * available for performance reasons and to cover certain edge-cases.
  *
  * @template V Type of the elements stored in the data structure.
+ *
+ * @example
+ * ```typescript
+ * // create a DataFrame from row data
+ * const result: Result<DataFrame<number>, string> = DataFrame.from<number>([
+ *     [ 1,  2,  3],  // row 1
+ *     [ 4,  5,  6],  // row 2
+ *     [ 7,  8,  9],  // row 3
+ *     [10, 11, 12]   // row 4
+ * ])
+ *
+ * // creates a DataFrame from column data
+ * const result = DataFrame.fromColumnData([
+ *     [ 1,  2,  3], // column 1
+ *     [ 4,  5,  6], // column 2
+ *     [ 7,  8,  9], // column 3
+ *     [10, 11, 12]  // column 4
+ * ])
+ *
+ * // both of these examples return a Result that holds the DataFrame when creating
+ * // the data-frame succeeded. If it failed, for example because not all the rows
+ * // had the same number of columns, then it returns a failure explaining why the
+ * // creation of the DataFrame failed. For example:
+ * const result = DataFrame.fromColumnData([
+ *     [ 1,  2,  3],      // column 1
+ *     [ 4,  5,  6],      // column 2
+ *     [ 7,  8,  9],      // column 3
+ *     [10, 11, 12, 13]   // column 4, which has 4 rows instead of 3
+ * ])
+ * expect(result.failed).toBe(true)
+ * expect(result.error).toEqual("(DataFrame.validateDimensions) All columns must have the same number of rows; min_num_rows: 3, maximum_rows: 4")
+ * ```
  */
 export class DataFrame<V> {
     private readonly data: Array<V>
@@ -102,9 +137,31 @@ export class DataFrame<V> {
 
     /**
      * Creates and returns a copy of the current DataFrame instance. Note that it does not copy the
-     * the data elements, but rather copies their references.
+     * data elements, but rather copies their references.
      *
      * @return A new DataFrame instance containing the same data, number of rows, and columns as the original.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const copied = dataFrame.copy()
+     *
+     * // the copy and original data-frame should be equal
+     * expect(copied).toEqual(dataFrame)
+     *
+     * // but the copy is not the same object as the original, which
+     * // we prove by modifying the copied, and showing that it doesn't
+     * // equal the original, and is equal to its original self
+     * copied.setElementInPlaceAt(0, 0, 100)
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * expect(dataFrame).not.toEqual(copied)
+     * ```
      */
     public copy(): DataFrame<V> {
         return new DataFrame(this.data.slice(), this.numRows, this.numColumns)
@@ -116,6 +173,24 @@ export class DataFrame<V> {
      * @param other The DataFrame instance to compare with the current instance.
      * @return A boolean indicating whether the two DataFrame instances are equal. Returns true if both have the
      * same length and identical data, otherwise false.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame_4_3 = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const dataFrame_4_3_evens = dataFrame_4_3.mapElements(value => value * 2)
+     *
+     * // two data-frames with different values are not equal
+     * expect(dataFrame_4_3).not.toEqual(dataFrame_4_3_evens)
+     *
+     * // a data-frame equals itself
+     * expect(dataFrame_4_3).toEqual(dataFrame_4_3)
+     * })
+     * ```
      */
     public equals(other: DataFrame<V>): boolean {
         return this.data.length === other.data.length && this.data.every((value, index) => value === other.data[index])
@@ -127,6 +202,29 @@ export class DataFrame<V> {
      * @template T the element type
      * @return A successful result containing the row data as an array if the index is valid,
      * or a failure result containing an error message if the index is out of bounds.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // grab a copy of the 3rd row from the data-frame
+     * const slice = dataFrame.rowSlice(2).getOrThrow()
+     * expect(slice).toEqual([7, 8, 9])
+     *
+     * // prove that it is a copy by modifying the row-slice and
+     * // showing that the original data-frame wasn't modified
+     * for (let i = 0; i < slice.length; i++) {
+     *     slice[i] = 10 * slice[i]
+     * }
+     * expect(slice).toEqual([70, 80, 90])
+     * expect(dataFrame.rowSlice(2).getOrThrow()).toEqual([7, 8, 9])
+     * ```
      */
     public rowSlice(rowIndex: number): Result<Array<V>, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows) {
@@ -140,6 +238,28 @@ export class DataFrame<V> {
      * Each row slice is an array of elements corresponding to a single row.
      *
      * @return An array where each element is an array representing a row slice.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12],
+     * ]).getOrThrow()
+     *
+     * // grab a copy of all the rows
+     * const rowSlices: Array<Array<number>> = dataFrame.rowSlices()
+     *
+     * // of which there are 4
+     * expect(rowSlices.length).toEqual(4)
+     *
+     * // and the rows should be the expected rows
+     * expect(rowSlices[0]).toEqual([1, 2, 3])
+     * expect(rowSlices[1]).toEqual([4, 5, 6])
+     * expect(rowSlices[2]).toEqual([7, 8, 9])
+     * expect(rowSlices[3]).toEqual([10, 11, 12])
+     * ```
      */
     public rowSlices(): Array<Array<V>> {
         const rowSlices: Array<Array<V>> = []
@@ -155,6 +275,29 @@ export class DataFrame<V> {
      * @template T the element type
      * @return Returns a success Result containing the extracted column as an array
      * if the columnIndex is valid. Otherwise, returns a failure Result with an error message.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // grab a copy of the second column from the data-frame
+     * const slice = dataFrame.columnSlice(1).getOrThrow()
+     * expect(slice).toEqual([2, 5, 8, 11])
+     *
+     * // prove that the slice is a copy by modifying the slice
+     * // and then showing that it didn't modify the original data-frame
+     * for (let i = 0; i < slice.length; i++) {
+     *     slice[i] = 10 * slice[i]
+     * }
+     * expect(slice).toEqual([20, 50, 80, 110])
+     * expect(dataFrame.columnSlice(1).getOrThrow()).toEqual([2, 5, 8, 11])
+     * ```
      */
     public columnSlice(columnIndex: number): Result<Array<V>, string> {
         if (columnIndex >= 0 && columnIndex <= this.numColumns) {
@@ -175,6 +318,26 @@ export class DataFrame<V> {
      * each column of the structure.
      *
      * @return A 2D array representing slices of elements from all columns.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     * ]).getOrThrow()
+     *
+     * // grab an array of all the columns
+     * const colSlices: Array<Array<number>> = dataFrame.columnSlices()
+     *
+     * // of which there are 3
+     * expect(colSlices.length).toEqual(3)
+     *
+     * // and they should be the expected columns
+     * expect(colSlices[0]).toEqual([1, 4, 7])
+     * expect(colSlices[1]).toEqual([2, 5, 8])
+     * expect(colSlices[2]).toEqual([3, 6, 9])
+     * ```
      */
     public columnSlices(): Array<Array<V>> {
         const columnSlices: Array<Array<V>> = []
@@ -191,6 +354,22 @@ export class DataFrame<V> {
      * @template T the element type
      * @return A `Result` object containing the element if the indices are within bounds,
      * or an error message string if the indices are out of bounds.
+     *
+     * @example
+     * ```typescript
+     * // create a data-frame, map it to the value of the 3rd row and column
+     * const value = DataFrame.from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12]
+     *     ])
+     *     .flatMap(dataFrame => dataFrame.elementAt(2, 2))
+     *     .getOrThrow()
+     *
+     * // and that value should be 9
+     * expect(value).toEqual(9)
+     * ```
      */
     public elementAt(rowIndex: number, columnIndex: number): Result<V, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
@@ -212,6 +391,27 @@ export class DataFrame<V> {
      * @return A result object.
      *         On success, the result contains an updated DataFrame with the new value set.
      *         On failure, the result contains an error message specifying the out-of-bounds issue.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // change the value of the element in the 4th column of the 2nd row to 1000
+     * // and get an updated data-frame
+     * const updated = dataFrame.setElementAt(1, 3, 1000).getOrThrow()
+     *
+     * // which has the value of 1000 for the 4th column of the 2nd row
+     * expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
+     *
+     * // and the original data-frame is unchanged
+     * expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(true)
+     * ```
      */
     public setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
@@ -223,7 +423,55 @@ export class DataFrame<V> {
             `(DataFrame::setElementAt) Index out of bounds; ` +
             `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
         )
+    }
 
+    /**
+     * **has side-effects**
+     * <p>
+     * Updates the element at the specified row and column indices in the data frame.
+     * If the indices are out of bounds, the operation results in a failure.
+     *
+     * @param rowIndex The zero-based index of the row to update.
+     * @param columnIndex The zero-based index of the column to update.
+     * @param value The value to set at the specified row and column indices.
+     * @return A result object.
+     *         On success, the result contains an updated DataFrame with the new value set.
+     *         On failure, the result contains an error message specifying the out-of-bounds issue.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // update the value of the element in the 4th column of the 2nd row to 1000
+     * // and get back the original data-frame that has been updated
+     * const updated = dataFrame.setElementInPlaceAt(1, 3, 1000).getOrThrow()
+     *
+     * // the updated and original data-frames are the same
+     * expect(dataFrame).toEqual(updated)
+     *
+     * // the 4th column of the 2nd row now has a value of 1000
+     * expect(dataFrame.elementAt(1, 3).getOrThrow()).toEqual(1000)
+     *
+     * // updated in place, so the data-frame has changed, and so is no longer equal
+     * // to the original data
+     * expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(false)
+     * ```
+     */
+    public setElementInPlaceAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string> {
+        if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
+            this.data[rowIndex * this.numColumns + columnIndex] = value
+            return successResult(this)
+        }
+        return failureResult(
+            `(DataFrame::setElementAt) Index out of bounds; ` +
+            `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
+        )
     }
 
     /**
@@ -234,6 +482,36 @@ export class DataFrame<V> {
      * @param row The row data to be inserted. It must match the expected structure and length of the existing rows.
      * @return A result object that contains the updated DataFrame if successful
      * or an error message if the operation fails (e.g., due to an out-of-bounds index).
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [100, 200, 300],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     *
+     * // insert a row before the last row and get an updated data-frame
+     * const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
+     *
+     * // which has an additional row
+     * expect(updated.rowCount()).toEqual(5)
+     *
+     * // and is equal to the expect data-frame
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // and the original data-frame is unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     public insertRowBefore(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string> {
         if (rowIndex < 0 && rowIndex >= this.numRows) {
@@ -258,6 +536,37 @@ export class DataFrame<V> {
      * @param row - The new row to be added. It must have the same number of columns as the existing data structure.
      * @return A `Result` object containing the updated `DataFrame` on success or an error message if the
      * dimensions do not match.
+     * @see insertRowBefore
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12],
+     *     [100, 200, 300]
+     * ]).getOrThrow()
+     *
+     * // add a row to the end and get an updated data-frame
+     * const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
+     *
+     * // which now has an additional row
+     * expect(updated.rowCount()).toEqual(5)
+     *
+     * // and is equal to the expected data-frame
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // the original data-frame is unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     public pushRow(row: Array<V>): Result<DataFrame<V>, string> {
         if (row.length !== this.numColumns) {
@@ -498,7 +807,7 @@ export class DataFrame<V> {
      * expect(dataFrame).not.toEqual(expected)
      * ```
      */
-    public transpose(): DataFrame<V> {
+    transpose(): DataFrame<V> {
         const transposed = this.data.slice()
         for (let row = 0; row < this.numRows; row++) {
             for (let col = 0; col < this.numColumns; col++) {
@@ -506,6 +815,48 @@ export class DataFrame<V> {
             }
         }
         return new DataFrame(transposed, this.numColumns, this.numRows)
+    }
+
+    /**
+     * Applies the specified mapper to each element in the data-frame and returns a new data-frame
+     * with the updated elements.
+     * @param mapper A function that accepts the current value of the element and its (row, column)
+     * coordinates, and returns a new value of type U
+     * @template U The value type for the elements of the new data-frame
+     * @return A new {@link DataFrame} with the updated elements
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from<string>([
+     *     ['1', '2', '3'],
+     *     ['4', '5', '6'],
+     *     ['7', '8', '9'],
+     *     ['10', '11', '12']
+     * ]).getOrThrow()
+     *
+     * // convert each element from a number to a string
+     * const updated = dataFrame.mapElements<string>(value => (`${value}`))
+     *
+     * // the new elements are the ones expected, and the original data-frame
+     * // has not changed
+     * expect(updated).toEqual(expected)
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
+     */
+    mapElements<U>(mapper: (value: V, rowIndex: number, columnIndex: number) => U): DataFrame<U> {
+        const updatedData = this.data.map((value: V, index: number): U => {
+            const rowIndex = Math.floor(index / this.numColumns)
+            const columnIndex = index % this.numColumns
+            return mapper(value, rowIndex, columnIndex)
+        })
+        return new DataFrame(updatedData, this.numRows, this.numColumns)
     }
 
     /**
