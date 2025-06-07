@@ -212,6 +212,27 @@ export class DataFrame<V> {
      * @return A result object.
      *         On success, the result contains an updated DataFrame with the new value set.
      *         On failure, the result contains an error message specifying the out-of-bounds issue.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // change the value of the element in the 4th column of the 2nd row to 1000
+     * // and get an updated data-frame
+     * const updated = dataFrame.setElementAt(1, 3, 1000).getOrThrow()
+     *
+     * // which has the value of 1000 for the 4th column of the 2nd row
+     * expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
+     *
+     * // and the original data-frame is unchanged
+     * expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(true)
+     * ```
      */
     public setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
@@ -223,7 +244,55 @@ export class DataFrame<V> {
             `(DataFrame::setElementAt) Index out of bounds; ` +
             `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
         )
+    }
 
+    /**
+     * **has side-effects**
+     * <p>
+     * Updates the element at the specified row and column indices in the data frame.
+     * If the indices are out of bounds, the operation results in a failure.
+     *
+     * @param rowIndex The zero-based index of the row to update.
+     * @param columnIndex The zero-based index of the column to update.
+     * @param value The value to set at the specified row and column indices.
+     * @return A result object.
+     *         On success, the result contains an updated DataFrame with the new value set.
+     *         On failure, the result contains an error message specifying the out-of-bounds issue.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // update the value of the element in the 4th column of the 2nd row to 1000
+     * // and get back the original data-frame that has been updated
+     * const updated = dataFrame.setElementInPlaceAt(1, 3, 1000).getOrThrow()
+     *
+     * // the updated and original data-frames are the same
+     * expect(dataFrame).toEqual(updated)
+     *
+     * // the 4th column of the 2nd row now has a value of 1000
+     * expect(dataFrame.elementAt(1, 3).getOrThrow()).toEqual(1000)
+     *
+     * // updated in place, so the data-frame has changed, and so is no longer equal
+     * // to the original data
+     * expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(false)
+     * ```
+     */
+    public setElementInPlaceAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string> {
+        if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
+            this.data[rowIndex * this.numColumns + columnIndex] = value
+            return successResult(this)
+        }
+        return failureResult(
+            `(DataFrame::setElementAt) Index out of bounds; ` +
+            `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
+        )
     }
 
     /**
@@ -234,6 +303,36 @@ export class DataFrame<V> {
      * @param row The row data to be inserted. It must match the expected structure and length of the existing rows.
      * @return A result object that contains the updated DataFrame if successful
      * or an error message if the operation fails (e.g., due to an out-of-bounds index).
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [100, 200, 300],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     *
+     * // insert a row before the last row and get an updated data-frame
+     * const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
+     *
+     * // which has an additional row
+     * expect(updated.rowCount()).toEqual(5)
+     *
+     * // and is equal to the expect data-frame
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // and the original data-frame is unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     public insertRowBefore(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string> {
         if (rowIndex < 0 && rowIndex >= this.numRows) {
@@ -258,6 +357,37 @@ export class DataFrame<V> {
      * @param row - The new row to be added. It must have the same number of columns as the existing data structure.
      * @return A `Result` object containing the updated `DataFrame` on success or an error message if the
      * dimensions do not match.
+     * @see insertRowBefore
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12],
+     *     [100, 200, 300]
+     * ]).getOrThrow()
+     *
+     * // add a row to the end and get an updated data-frame
+     * const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
+     *
+     * // which now has an additional row
+     * expect(updated.rowCount()).toEqual(5)
+     *
+     * // and is equal to the expected data-frame
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // the original data-frame is unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     public pushRow(row: Array<V>): Result<DataFrame<V>, string> {
         if (row.length !== this.numColumns) {

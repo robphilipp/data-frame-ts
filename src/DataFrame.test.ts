@@ -195,15 +195,31 @@ describe("Testing data-frame behavior", () => {
 
     describe("Testing updates to the data-frame", () => {
         test("should be able to get an updated a data-frame without changing the original", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const updated = dataFrame.setElementAt(1, 3, 1000).getOrThrow()
             expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(true)
+        })
+
+        test("should be able to update a data-frame in-place", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const updated = dataFrame.setElementInPlaceAt(1, 3, 1000).getOrThrow()
+            expect(dataFrame).toEqual(updated)
+            expect(updated.elementAt(1, 3).getOrThrow()).toEqual(1000)
+            // updated in place, so the data-frame has changed
+            expect(dataFrame.equals(DataFrame.from(data).getOrThrow())).toBe(false)
         })
 
         test("should be able to insert a row at beginning", () => {
@@ -227,14 +243,13 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to insert a row before end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
-            expect(updated.rowCount()).toEqual(5)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -242,19 +257,20 @@ describe("Testing data-frame behavior", () => {
                 [100, 200, 300],
                 [10, 11, 12]
             ]).getOrThrow()
+            const updated = dataFrame.insertRowBefore(3, [100, 200, 300]).getOrThrow()
+            expect(updated.rowCount()).toEqual(5)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to insert a row at end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
-            expect(updated.rowCount()).toEqual(5)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -262,8 +278,10 @@ describe("Testing data-frame behavior", () => {
                 [10, 11, 12],
                 [100, 200, 300]
             ]).getOrThrow()
+            const updated = dataFrame.pushRow([100, 200, 300]).getOrThrow()
+            expect(updated.rowCount()).toEqual(5)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to delete a row from front", () => {
