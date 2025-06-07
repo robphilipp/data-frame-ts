@@ -89,13 +89,15 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should retrieve element values when dimensions are valid (2, 2)", () => {
-            const result = DataFrame.from([
-                [1, 2, 3],
-                [4, 5, 6],
-                [7, 8, 9],
-                [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.elementAt(2, 2)).getOrThrow()).toEqual(9)
+            const value = DataFrame.from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12]
+                ])
+                .flatMap(dataFrame => dataFrame.elementAt(2, 2))
+                .getOrThrow()
+            expect(value).toEqual(9)
         })
 
         test("should retrieve element values when dimensions are valid (0, 0)", () => {
@@ -138,14 +140,29 @@ describe("Testing data-frame behavior", () => {
             expect(result.flatMap((df: DataFrame<number>) => df.elementAt(3, 2)).getOrThrow()).toEqual(12)
         })
 
-        test("should retrieve row at row index", () => {
-            const result = DataFrame.from([
+        test("should retrieve row slice at row index", () => {
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const slice = dataFrame.rowSlice(2).getOrThrow()
+            expect(slice).toEqual([7, 8, 9])
+
+            for (let i = 0; i < slice.length; i++) {
+                slice[i] = 10 * slice[i]
+            }
+            expect(slice).toEqual([70, 80, 90])
+            expect(dataFrame.rowSlice(2).getOrThrow()).toEqual([7, 8, 9])
+            // const result = DataFrame.from([
+            //     [1, 2, 3],
+            //     [4, 5, 6],
+            //     [7, 8, 9],
+            //     [10, 11, 12]
+            // ])
+            // expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
         })
 
         test("should not retrieve row if the row index is out of bounds", () => {
@@ -159,13 +176,20 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should retrieve column at column index", () => {
-            const result = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.flatMap((df: DataFrame<number>) => df.columnSlice(1)).getOrThrow()).toEqual([2, 5, 8, 11])
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const slice = dataFrame.columnSlice(1).getOrThrow()
+            expect(slice).toEqual([2, 5, 8, 11])
+            for (let i = 0; i < slice.length; i++) {
+                slice[i] = 10 * slice[i]
+            }
+            expect(slice).toEqual([20, 50, 80, 110])
+            expect(dataFrame.columnSlice(1).getOrThrow()).toEqual([2, 5, 8, 11])
         })
 
         test("should be able to retrieve all the columns as slices", () => {
@@ -179,6 +203,21 @@ describe("Testing data-frame behavior", () => {
             expect(colSlices[0]).toEqual([1, 4, 7])
             expect(colSlices[1]).toEqual([2, 5, 8])
             expect(colSlices[2]).toEqual([3, 6, 9])
+        })
+
+        test("should be able to retrieve all the rows as slices", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12],
+            ]).getOrThrow()
+            const rowSlices: Array<Array<number>> = dataFrame.rowSlices()
+            expect(rowSlices.length).toEqual(4)
+            expect(rowSlices[0]).toEqual([1, 2, 3])
+            expect(rowSlices[1]).toEqual([4, 5, 6])
+            expect(rowSlices[2]).toEqual([7, 8, 9])
+            expect(rowSlices[3]).toEqual([10, 11, 12])
         })
 
         test("copy should equal itself", () => {

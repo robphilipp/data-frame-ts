@@ -127,6 +127,29 @@ export class DataFrame<V> {
      * @template T the element type
      * @return A successful result containing the row data as an array if the index is valid,
      * or a failure result containing an error message if the index is out of bounds.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // grab a copy of the 3rd row from the data-frame
+     * const slice = dataFrame.rowSlice(2).getOrThrow()
+     * expect(slice).toEqual([7, 8, 9])
+     *
+     * // prove that it is a copy by modifying the row-slice and
+     * // showing that the original data-frame wasn't modified
+     * for (let i = 0; i < slice.length; i++) {
+     *     slice[i] = 10 * slice[i]
+     * }
+     * expect(slice).toEqual([70, 80, 90])
+     * expect(dataFrame.rowSlice(2).getOrThrow()).toEqual([7, 8, 9])
+     * ```
      */
     public rowSlice(rowIndex: number): Result<Array<V>, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows) {
@@ -140,6 +163,28 @@ export class DataFrame<V> {
      * Each row slice is an array of elements corresponding to a single row.
      *
      * @return An array where each element is an array representing a row slice.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12],
+     * ]).getOrThrow()
+     *
+     * // grab a copy of all the rows
+     * const rowSlices: Array<Array<number>> = dataFrame.rowSlices()
+     *
+     * // of which there are 4
+     * expect(rowSlices.length).toEqual(4)
+     *
+     * // and the rows should be the expected rows
+     * expect(rowSlices[0]).toEqual([1, 2, 3])
+     * expect(rowSlices[1]).toEqual([4, 5, 6])
+     * expect(rowSlices[2]).toEqual([7, 8, 9])
+     * expect(rowSlices[3]).toEqual([10, 11, 12])
+     * ```
      */
     public rowSlices(): Array<Array<V>> {
         const rowSlices: Array<Array<V>> = []
@@ -155,6 +200,29 @@ export class DataFrame<V> {
      * @template T the element type
      * @return Returns a success Result containing the extracted column as an array
      * if the columnIndex is valid. Otherwise, returns a failure Result with an error message.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     *
+     * // grab a copy of the second column from the data-frame
+     * const slice = dataFrame.columnSlice(1).getOrThrow()
+     * expect(slice).toEqual([2, 5, 8, 11])
+     *
+     * // prove that the slice is a copy by modifying the slice
+     * // and then showing that it didn't modify the original data-frame
+     * for (let i = 0; i < slice.length; i++) {
+     *     slice[i] = 10 * slice[i]
+     * }
+     * expect(slice).toEqual([20, 50, 80, 110])
+     * expect(dataFrame.columnSlice(1).getOrThrow()).toEqual([2, 5, 8, 11])
+     * ```
      */
     public columnSlice(columnIndex: number): Result<Array<V>, string> {
         if (columnIndex >= 0 && columnIndex <= this.numColumns) {
@@ -175,6 +243,26 @@ export class DataFrame<V> {
      * each column of the structure.
      *
      * @return A 2D array representing slices of elements from all columns.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     * ]).getOrThrow()
+     *
+     * // grab an array of all the columns
+     * const colSlices: Array<Array<number>> = dataFrame.columnSlices()
+     *
+     * // of which there are 3
+     * expect(colSlices.length).toEqual(3)
+     *
+     * // and they should be the expected columns
+     * expect(colSlices[0]).toEqual([1, 4, 7])
+     * expect(colSlices[1]).toEqual([2, 5, 8])
+     * expect(colSlices[2]).toEqual([3, 6, 9])
+     * ```
      */
     public columnSlices(): Array<Array<V>> {
         const columnSlices: Array<Array<V>> = []
@@ -191,6 +279,22 @@ export class DataFrame<V> {
      * @template T the element type
      * @return A `Result` object containing the element if the indices are within bounds,
      * or an error message string if the indices are out of bounds.
+     *
+     * @example
+     * ```typescript
+     * // create a data-frame, map it to the value of the 3rd row and column
+     * const value = DataFrame.from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12]
+     *     ])
+     *     .flatMap(dataFrame => dataFrame.elementAt(2, 2))
+     *     .getOrThrow()
+     *
+     * // and that value should be 9
+     * expect(value).toEqual(9)
+     * ```
      */
     public elementAt(rowIndex: number, columnIndex: number): Result<V, string> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
