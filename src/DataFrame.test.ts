@@ -9,8 +9,11 @@ describe("Testing data-frame behavior", () => {
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ])
-            expect(result.succeeded).toBe(true)
+            ]).getOrThrow()
+            expect(result.rowCount()).toBe(4)
+            expect(result.columnCount()).toBe(3)
+            expect(result.elementAt(0, 0).getOrThrow()).toBe(1)
+            expect(result.elementAt(2, 2).getOrThrow()).toBe(9)
         })
 
         test("should not create a data-frame when dimensions are invalid", () => {
@@ -72,6 +75,33 @@ describe("Testing data-frame behavior", () => {
             expect(typeof transposed.elementAt(0, 0).getOrThrow()).toEqual("number")
             expect(transposed.elementAt(1, 0).getOrThrow()).toEqual("2")
             expect(typeof transposed.elementAt(1, 0).getOrThrow()).toEqual("string")
+        })
+    })
+
+    describe("Testing data-frame equality", () => {
+        const dataFrame_4_3 = DataFrame.from([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [10, 11, 12]
+        ]).getOrThrow()
+        const dataFrame_4_3_evens = dataFrame_4_3.mapElements(value => value * 2)
+        const dataFrame_4_4 = DataFrame.from([
+            [1, 2, 3, 31],
+            [4, 5, 6, 61],
+            [7, 8, 9, 91],
+            [10, 11, 12, 121]
+        ]).getOrThrow()
+
+        test("should be able to compare two data-frames", () => {
+            expect(dataFrame_4_3).not.toEqual(dataFrame_4_3_evens)
+            expect(dataFrame_4_3).not.toEqual(dataFrame_4_4)
+        })
+
+        test("a data-frame should be equal to itself", () => {
+            expect(dataFrame_4_3).toEqual(dataFrame_4_3)
+            expect(dataFrame_4_3_evens).toEqual(dataFrame_4_3_evens)
+            expect(dataFrame_4_4).toEqual(dataFrame_4_4)
         })
     })
 
@@ -221,14 +251,19 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("copy should equal itself", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const copied = dataFrame.copy()
-            expect(copied.equals(dataFrame)).toBe(true)
+            expect(copied).toEqual(dataFrame)
+
+            copied.setElementInPlaceAt(0, 0, 100)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+            expect(dataFrame).not.toEqual(copied)
         })
     })
 
@@ -453,6 +488,45 @@ describe("Testing data-frame behavior", () => {
             ]).getOrThrow()
             const transposed = dataFrame.transpose()
             expect(transposed).toEqual(expected)
+        })
+        
+        test("should be able to apply a map to each element in the data-frame", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const expected = DataFrame.from<string>([
+                ['1', '2', '3'],
+                ['4', '5', '6'],
+                ['7', '8', '9'],
+                ['10', '11', '12']
+            ]).getOrThrow()
+            const updated = dataFrame.mapElements<string>(value => (`${value}`))
+            expect(updated).toEqual(expected)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+        })
+
+        test("should be able to apply a map to each element in the data-frame based on its coordinates", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
+            const expected = DataFrame.from<string>([
+                ['0', '1', '2'],
+                ['4', '6', '8'],
+                ['14', '17', '20'],
+                ['30', '34', '38']
+            ]).getOrThrow()
+            const updated = dataFrame
+                .mapElements<string>((value, row, column) => (`${value * row + column}`))
+            expect(updated).toEqual(expected)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
     })
 

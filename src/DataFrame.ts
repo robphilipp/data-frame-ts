@@ -5,9 +5,44 @@ import {CellCoordinate, ColumnCoordinate, RowCoordinate, TagCoordinate, Tags, Ta
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
  * and querying of tabular data in a row-major format. The `DataFrame` is immutable for
  * immutable objects. Modifications to the rows, columns, or elements will not modify the
- * original `DataFrame`, but rather return a modified copy of the `DataFrame`.
+ * original `DataFrame`, but rather return a modified copy of the `DataFrame`. However,
+ * there are a few functions, `setElementInPlaceAt`, `mapRowInPlace, and `mapColumnInPlace`
+ * that mutate the data-frame. Using these "in-place" methods is discouraged but are
+ * available for performance reasons and to cover certain edge-cases.
  *
  * @template V Type of the elements stored in the data structure.
+ *
+ * @example
+ * ```typescript
+ * // create a DataFrame from row data
+ * const result: Result<DataFrame<number>, string> = DataFrame.from<number>([
+ *     [ 1,  2,  3],  // row 1
+ *     [ 4,  5,  6],  // row 2
+ *     [ 7,  8,  9],  // row 3
+ *     [10, 11, 12]   // row 4
+ * ])
+ *
+ * // creates a DataFrame from column data
+ * const result = DataFrame.fromColumnData([
+ *     [ 1,  2,  3], // column 1
+ *     [ 4,  5,  6], // column 2
+ *     [ 7,  8,  9], // column 3
+ *     [10, 11, 12]  // column 4
+ * ])
+ *
+ * // both of these examples return a Result that holds the DataFrame when creating
+ * // the data-frame succeeded. If it failed, for example because not all the rows
+ * // had the same number of columns, then it returns a failure explaining why the
+ * // creation of the DataFrame failed. For example:
+ * const result = DataFrame.fromColumnData([
+ *     [ 1,  2,  3],      // column 1
+ *     [ 4,  5,  6],      // column 2
+ *     [ 7,  8,  9],      // column 3
+ *     [10, 11, 12, 13]   // column 4, which has 4 rows instead of 3
+ * ])
+ * expect(result.failed).toBe(true)
+ * expect(result.error).toEqual("(DataFrame.validateDimensions) All columns must have the same number of rows; min_num_rows: 3, maximum_rows: 4")
+ * ```
  */
 export class DataFrame<V> {
     private readonly data: Array<V>
@@ -102,9 +137,31 @@ export class DataFrame<V> {
 
     /**
      * Creates and returns a copy of the current DataFrame instance. Note that it does not copy the
-     * the data elements, but rather copies their references.
+     * data elements, but rather copies their references.
      *
      * @return A new DataFrame instance containing the same data, number of rows, and columns as the original.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const copied = dataFrame.copy()
+     *
+     * // the copy and original data-frame should be equal
+     * expect(copied).toEqual(dataFrame)
+     *
+     * // but the copy is not the same object as the original, which
+     * // we prove by modifying the copied, and showing that it doesn't
+     * // equal the original, and is equal to its original self
+     * copied.setElementInPlaceAt(0, 0, 100)
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * expect(dataFrame).not.toEqual(copied)
+     * ```
      */
     public copy(): DataFrame<V> {
         return new DataFrame(this.data.slice(), this.numRows, this.numColumns)
@@ -116,6 +173,24 @@ export class DataFrame<V> {
      * @param other The DataFrame instance to compare with the current instance.
      * @return A boolean indicating whether the two DataFrame instances are equal. Returns true if both have the
      * same length and identical data, otherwise false.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame_4_3 = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const dataFrame_4_3_evens = dataFrame_4_3.mapElements(value => value * 2)
+     *
+     * // two data-frames with different values are not equal
+     * expect(dataFrame_4_3).not.toEqual(dataFrame_4_3_evens)
+     *
+     * // a data-frame equals itself
+     * expect(dataFrame_4_3).toEqual(dataFrame_4_3)
+     * })
+     * ```
      */
     public equals(other: DataFrame<V>): boolean {
         return this.data.length === other.data.length && this.data.every((value, index) => value === other.data[index])
@@ -732,7 +807,7 @@ export class DataFrame<V> {
      * expect(dataFrame).not.toEqual(expected)
      * ```
      */
-    public transpose(): DataFrame<V> {
+    transpose(): DataFrame<V> {
         const transposed = this.data.slice()
         for (let row = 0; row < this.numRows; row++) {
             for (let col = 0; col < this.numColumns; col++) {
@@ -740,6 +815,48 @@ export class DataFrame<V> {
             }
         }
         return new DataFrame(transposed, this.numColumns, this.numRows)
+    }
+
+    /**
+     * Applies the specified mapper to each element in the data-frame and returns a new data-frame
+     * with the updated elements.
+     * @param mapper A function that accepts the current value of the element and its (row, column)
+     * coordinates, and returns a new value of type U
+     * @template U The value type for the elements of the new data-frame
+     * @return A new {@link DataFrame} with the updated elements
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from<string>([
+     *     ['1', '2', '3'],
+     *     ['4', '5', '6'],
+     *     ['7', '8', '9'],
+     *     ['10', '11', '12']
+     * ]).getOrThrow()
+     *
+     * // convert each element from a number to a string
+     * const updated = dataFrame.mapElements<string>(value => (`${value}`))
+     *
+     * // the new elements are the ones expected, and the original data-frame
+     * // has not changed
+     * expect(updated).toEqual(expected)
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
+     */
+    mapElements<U>(mapper: (value: V, rowIndex: number, columnIndex: number) => U): DataFrame<U> {
+        const updatedData = this.data.map((value: V, index: number): U => {
+            const rowIndex = Math.floor(index / this.numColumns)
+            const columnIndex = index % this.numColumns
+            return mapper(value, rowIndex, columnIndex)
+        })
+        return new DataFrame(updatedData, this.numRows, this.numColumns)
     }
 
     /**
