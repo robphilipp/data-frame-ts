@@ -29,7 +29,8 @@ export class DataFrame<V> {
     }
 
     /**
-     * Creates a DataFrame from a 2D array of data.
+     * Creates a DataFrame from a 2D array of data. Returns a {@link Result} containing the {@link DataFrame} if
+     * the specified data was for a valid data-frame. Otherwise, returns a failure result with an error message.
      *
      * @param data A two-dimensional array representing the data. When {@link rowForm} is true (the default value),
      * then each inner array represents a row of data, and all the rows must have the same number of elements. When
@@ -39,6 +40,16 @@ export class DataFrame<V> {
      * @template T the element type
      * @return A Result object containing either a DataFrame constructed from the input data
      * or an error message if the dimensions are invalid.
+     *
+     * @example
+     * ```typescript
+     * // create a data-frame with numbers and strings
+     * const dataFrame: Result<DataFrame<number | string>, string> = DataFrame.from<number | string>([
+     *     [1, "A", 3],
+     *     [4, "B", 6],
+     *     [7, "C", 9]
+     * ])
+     * ```
      */
     static from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string> {
         return validateDimensions(data, rowForm)
@@ -48,11 +59,26 @@ export class DataFrame<V> {
 
     /**
      * Creates a data-frame instance from the given columnar data. In column-form, each inner array represents
-     * a column of data rather than a row of data.
+     * a column of data rather than a row of data. Returns a {@link Result} containing the {@link DataFrame} if
+     * the specified data was for a valid data-frame. Otherwise, returns a failure result with an error message.
      *
      * @param {Array<Array<V>>} data - An array of arrays, where each inner array represents a column of data.
      * @return {Result<DataFrame<V>, string>} A Result object containing either a DataFrame instance, if
      * successful, or an error message string.
+     *
+     * @example
+     * ```typescript
+     * // Returns a result holding a data-frame with the following rows
+     * // [[1, 4, 7, 10],
+     * //  [2, 5, 8, 11],
+     * //  [3, 6, 9, 12]]
+     * const result: Result<DataFrame<number>, string> = DataFrame.fromColumnData<number>([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ])
+     * ```
      */
     static fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string> {
         return DataFrame.from(data, false)
@@ -75,7 +101,8 @@ export class DataFrame<V> {
     }
 
     /**
-     * Creates and returns a deep copy of the current DataFrame instance.
+     * Creates and returns a copy of the current DataFrame instance. Note that it does not copy the
+     * the data elements, but rather copies their references.
      *
      * @return A new DataFrame instance containing the same data, number of rows, and columns as the original.
      */
@@ -137,7 +164,10 @@ export class DataFrame<V> {
             }
             return successResult(column)
         }
-        return failureResult(`(DataFrame::columnSlice) Column index out of bounds; column_index: ${columnIndex}; range: (0, ${this.numColumns})`)
+        return failureResult(
+            `(DataFrame::columnSlice) Column index out of bounds; ` +
+            `column_index: ${columnIndex}; range: (0, ${this.numColumns})`
+        )
     }
 
     /**
@@ -166,7 +196,10 @@ export class DataFrame<V> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
             return successResult(this.data[rowIndex * this.numColumns + columnIndex])
         }
-        return failureResult(`(DataFrame::elementAt) Index out of bounds; row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`)
+        return failureResult(
+            `(DataFrame::elementAt) Index out of bounds; ` +
+            `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
+        )
     }
 
     /**
@@ -186,7 +219,10 @@ export class DataFrame<V> {
             updated[rowIndex * this.numColumns + columnIndex] = value
             return successResult(new DataFrame(updated, this.numRows, this.numColumns))
         }
-        return failureResult(`(DataFrame::setElementAt) Index out of bounds; row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`)
+        return failureResult(
+            `(DataFrame::setElementAt) Index out of bounds; ` +
+            `row: ${rowIndex}, column: ${columnIndex}; range: (${this.numRows}, ${this.numColumns})`
+        )
 
     }
 
@@ -238,11 +274,43 @@ export class DataFrame<V> {
      * @param column The column to be inserted. The length of this column must match the number of rows in the DataFrame.
      * @return A result object containing the updated DataFrame on success,
      * or an error message on failure if the index is out of bounds or the column length does not match the number of rows.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [100, 1, 2, 3],
+     *     [200, 4, 5, 6],
+     *     [300, 7, 8, 9],
+     *     [400, 10, 11, 12]
+     * ]).getOrThrow()
+     *
+     * // insert a column at the front and get back an updated data-frame
+     * const updated = dataFrame.insertColumnBefore(0, [100, 200, 300, 400]).getOrThrow()
+     *
+     * // the updated data-frame now has 4 columns
+     * expect(updated.columnCount()).toEqual(4)
+     *
+     * // and is equal to the expected
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // but the original data-frame is unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     // todo may be faster to copy the whole array, and then splice based on the indexes of the array (starting at the back)
     public insertColumnBefore(columnIndex: number, column: Array<V>): Result<DataFrame<V>, string> {
         if (columnIndex < 0 && columnIndex >= this.numColumns) {
-            return failureResult(`(DataFrame::insertColumnBefore) Index out of bounds; column: ${columnIndex}; range: (0, ${this.numColumns})`)
+            return failureResult(
+                `(DataFrame::insertColumnBefore) Index out of bounds; ` +
+                `column: ${columnIndex}; range: (0, ${this.numColumns})`
+            )
         }
         if (column.length !== this.numRows) {
             return failureResult(`(DataFrame::insertColumnBefore) The column must have the same number of rows as the data. ` +
@@ -261,6 +329,35 @@ export class DataFrame<V> {
      * must match the number of rows in the DataFrame.
      * @return Returns a success result containing the updated DataFrame if the column is added successfully,
      * or a failure result with an error message if the column length does not match the number of rows.
+     *
+     * @example
+     * ```typescript
+     * const data = [
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]
+     * const dataFrame = DataFrame.from(data).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3, 100],
+     *     [4, 5, 6, 200],
+     *     [7, 8, 9, 300],
+     *     [10, 11, 12, 400]
+     * ]).getOrThrow()
+     *
+     * // add a column to the end and get back an updated data-frame
+     * const updated = dataFrame.pushColumn([100, 200, 300, 400]).getOrThrow()
+     *
+     * // now the updated data-frame has 4 columns
+     * expect(updated.columnCount()).toEqual(4)
+     *
+     * // and the updated data-frame equals the expected
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // and the original data-frame remains unchanged
+     * expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+     * ```
      */
     public pushColumn(column: Array<V>): Result<DataFrame<V>, string> {
         if (column.length !== this.numRows) {
@@ -279,13 +376,42 @@ export class DataFrame<V> {
      * range of existing rows.
      * @return A Result containing a new DataFrame without the specified row if the operation is successful,
      * or an error message if the operation fails.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     * ]).getOrThrow()
+     *
+     * // delete the fourth row
+     * const updated = dataFrame.deleteRowAt(3).getOrThrow()
+     *
+     * // now there should only be 3 rows left
+     * expect(updated.rowCount()).toEqual(3)
+     *
+     * // the updated data-frame should be equal to the expected
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // and the original data-frame should be unchanged
+     * expect(updated.equals(dataFrame)).toBe(false)
+     * ```
      */
     public deleteRowAt(rowIndex: number): Result<DataFrame<V>, string> {
         if (this.numRows === 0) {
             failureResult(`(DataFrame::deleteRowAt) Cannot delete row from an empty DataFrame.`)
         }
         if (rowIndex < 0 || rowIndex >= this.numRows) {
-            return failureResult(`(DataFrame::deleteRowAt) Index out of bounds; row: ${rowIndex}; range: (0, ${this.numRows})`)
+            return failureResult(
+                `(DataFrame::deleteRowAt) Index out of bounds; row: ${rowIndex}; range: (0, ${this.numRows})`
+            )
         }
 
         const copy = this.data.slice()
@@ -299,13 +425,44 @@ export class DataFrame<V> {
      * @param columnIndex The index of the column to be deleted. Must be within the range of existing columns.
      * @return A `Result` object containing the updated DataFrame if the operation is successful,
      * or an error message if the operation fails.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [2, 3],
+     *     [5, 6],
+     *     [8, 9],
+     *     [11, 12]
+     * ]).getOrThrow()
+     *
+     * // delete the first column
+     * const updated = dataFrame.deleteColumnAt(0).getOrThrow()
+     *
+     * // now there are only 2 columns remaining
+     * expect(updated.columnCount()).toEqual(2)
+     *
+     * // the updated data-frame should equal the expected
+     * expect(updated.equals(expected)).toBe(true)
+     *
+     * // and the origin data-frame remains unchanged
+     * expect(updated.equals(dataFrame)).toBe(false)
+     * ```
      */
     public deleteColumnAt(columnIndex: number): Result<DataFrame<V>, string> {
         if (this.numColumns === 0) {
             failureResult(`(DataFrame::deleteColumnAt) Cannot delete column from an empty DataFrame.`)
         }
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
-            return failureResult(`(DataFrame::deleteColumnAt) Index out of bounds; column: ${columnIndex}; range: (0, ${this.numColumns})`)
+            return failureResult(
+                `(DataFrame::deleteColumnAt) Index out of bounds; ` +
+                `column: ${columnIndex}; range: (0, ${this.numColumns})`
+            )
         }
         const rows = this.rowSlices()
         rows.forEach((row: Array<V>) => row.splice(columnIndex, 1))
@@ -316,6 +473,30 @@ export class DataFrame<V> {
      * Transposes the current DataFrame, swapping its rows and columns.
      *
      * @return {DataFrame<V>} A new DataFrame instance where rows and columns of the original DataFrame are swapped.
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 4, 7, 10],
+     *     [2, 5, 8, 11],
+     *     [3, 6, 9, 12]
+     * ]).getOrThrow()
+     *
+     * // transpose the data-frame
+     * const transposed = dataFrame.transpose()
+     *
+     * // the transposed data-frame should equal the expected
+     * expect(transposed).toEqual(expected)
+     *
+     * // and the original data-frame should be unchanged
+     * expect(dataFrame).not.toEqual(expected)
+     * ```
      */
     public transpose(): DataFrame<V> {
         const transposed = this.data.slice()
@@ -336,10 +517,36 @@ export class DataFrame<V> {
      * @return A success result containing the updated DataFrame if the operation is successful,
      * or a failure result containing an error message if the row index is invalid.
      * @see mapRowInPlace
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [14, 16, 18],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     *
+     * // map the row and return a new data-frame
+     * const updated = dataFrame.mapRow(2, (value: number) => value * 2).getOrThrow()
+     *
+     * expect(updated).toEqual(expected)
+     *
+     * // the original data-frame is unchanged
+     * expect(dataFrame).not.toEqual(expected)
+     * ```
      */
     public mapRow(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
-            return failureResult(`(DataFrame::mapRow) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`)
+            return failureResult(
+                `(DataFrame::mapRow) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`
+            )
         }
         const updated = this.data.slice()
         for (let i = rowIndex * this.numColumns; i < (rowIndex + 1) * this.numColumns; i++) {
@@ -358,10 +565,34 @@ export class DataFrame<V> {
      * @return A success result containing the updated DataFrame if the operation is successful,
      * or a failure result containing an error message if the row index is invalid.
      * @see mapRow
+     *
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [14, 16, 18],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     *
+     * // updated the data-frame in-place
+     * const updated = dataFrame.mapRowInPlace(2, (value: number) => value * 2).getOrThrow()
+     *
+     * expect(updated).toEqual(expected)
+     * expect(dataFrame).toEqual(updated)
+     * ```
      */
     public mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
-            return failureResult(`(DataFrame::mapRowInPlace) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`)
+            return failureResult(
+                `(DataFrame::mapRowInPlace) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`
+            )
         }
         for (let i = rowIndex * this.numColumns; i < (rowIndex + 1) * this.numColumns; i++) {
             this.data[i] = mapper(this.data[i])
@@ -381,7 +612,9 @@ export class DataFrame<V> {
      */
     public mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
-            return failureResult(`(DataFrame::mapColumn) Invalid column index. Column index must be in [0, ${this.numColumns}); row_index: ${columnIndex}`)
+            return failureResult(
+                `(DataFrame::mapColumn) Invalid column index. Column index must be in [0, ${this.numColumns}); row_index: ${columnIndex}`
+            )
         }
         const updated = this.data.slice()
         for (let i = columnIndex; i < this.data.length; i += this.numColumns) {
@@ -403,7 +636,9 @@ export class DataFrame<V> {
      */
     public mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
-            return failureResult(`(DataFrame::mapColumnInPlace) Invalid column index. Column index must be in [0, ${this.numColumns}); row_index: ${columnIndex}`)
+            return failureResult(
+                `(DataFrame::mapColumnInPlace) Invalid column index. Column index must be in [0, ${this.numColumns}); row_index: ${columnIndex}`
+            )
         }
         for (let i = columnIndex; i < this.data.length; i += this.numColumns) {
             this.data[i] = mapper(this.data[i])

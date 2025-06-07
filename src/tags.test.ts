@@ -65,11 +65,26 @@ describe('tags', () => {
             newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
             newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 0)),
         )
-        test('should be able to retrieve all the row-tags', () => {
+
+        test('should be able to retrieve a tag by its ID', () => {
+            expect(tags.idForTag("my-row-tag", RowCoordinate.of(0)).getOrThrow()).toBe("tag-my-row-tag-(0,*)")
+        })
+
+        test('should return a failure result when retrieving a tag by ID that does not exist', () => {
+            expect(tags.idForTag("non-existent-tag", RowCoordinate.of(0)).failed).toBe(true)
+        })
+
+        test('should be able to retrieve all the row-tags using a predicate', () => {
             const rowTags = tags.filter(tag => tag.coordinate instanceof RowCoordinate)
             expect(rowTags.length).toBe(2)
             expect(rowTags[0].name).toBe("my-row-tag")
             expect(rowTags[1].name).toBe("my-row-tag-1")
+        })
+
+        test('should be able to retrieve all tags that end with a number', () => {
+            const rowTags = tags.filter(tag => /[0-9]+$/.test(tag.name))
+            expect(rowTags.length).toBe(1)
+            expect(rowTags[0].name).toBe("my-row-tag-1")
         })
     })
 
@@ -209,7 +224,7 @@ describe('tags', () => {
                 const removeResult = tags.remove(tag.id);
 
                 expect(removeResult.succeeded).toBe(true);
-                expect(removeResult.map(tags => tags.length()).getOrDefault(-1)).toBe(0);
+                expect(removeResult.map(tags => tags.length()).getOrElse(-1)).toBe(0);
             });
 
             test("should return failure when removing non-existent tag ID", () => {
@@ -297,7 +312,7 @@ describe('tags', () => {
 
                 expect(result.failed).toBe(true);
                 expect(result.failureOrUndefined())
-                    .toBe("No tag with specified name and coordinate found; name: non-existent; coordinate: (0, *)");
+                    .toBe("(Tags::uniqueTagFor) No tag with specified name and coordinate found; name: non-existent; coordinate: (0, *)");
             });
         })
     })

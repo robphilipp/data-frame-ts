@@ -1,6 +1,6 @@
 # Typescript DataFrame
 
-(AI generated docs, for now.)
+A TypeScript library for working with two-dimensional data structures with tagging capabilities.
 
 A lightweight, immutable, two-dimensional data structure for TypeScript that allows for manipulation and querying of tabular data.
 
@@ -114,18 +114,29 @@ const mappedColumnInPlace = df.mapColumnInPlace(1, value => value * 2).getOrThro
 
 ### Tagging
 
-The DataFrame supports tagging rows, columns, and cells with metadata:
+The DataFrame supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the DataFrame (row, column, or cell).
 
 ```typescript
 // Tag a row
-df.tagRow(0, "category", { toString: () => "header" });
+df.tagRow(0, "category", "header").getOrThrow();
 
 // Tag a column
-df.tagColumn(1, "dataType", { toString: () => "numeric" });
+df.tagColumn(1, "dataType", "numeric").getOrThrow();
 
 // Tag a cell
-df.tagCell(1, 2, "highlight", { toString: () => "true" });
+df.tagCell(1, 2, "highlight", "true").getOrThrow();
+
+// Chain multiple tag operations
+const taggedDf = df
+    .tagRow(0, "category", "header")
+    .getOrThrow()
+    .tagColumn(1, "dataType", "numeric")
+    .getOrThrow()
+    .tagCell(1, 2, "highlight", "true")
+    .getOrThrow();
 ```
+
+Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information.
 
 ### Error Handling
 
@@ -159,46 +170,59 @@ try {
 
 ## API Reference
 
-### Creation Methods
+### DataFrame Creation Methods
 
-- `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>`
-- `DataFrame.fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string>`
+- `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>` - Creates a DataFrame from a 2D array of data
+- `DataFrame.fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string>` - Creates a DataFrame from column-oriented data
 
 ### Data Access Methods
 
-- `rowCount(): number`
-- `columnCount(): number`
-- `elementAt(rowIndex: number, columnIndex: number): Result<V, string>`
-- `rowSlice(rowIndex: number): Result<Array<V>, string>`
-- `rowSlices(): Array<Array<V>>`
-- `columnSlice(columnIndex: number): Result<Array<V>, string>`
-- `columnSlices(): Array<Array<V>>`
-- `copy(): DataFrame<V>`
-- `equals(other: DataFrame<V>): boolean`
+- `rowCount(): number` - Returns the number of rows in the DataFrame
+- `columnCount(): number` - Returns the number of columns in the DataFrame
+- `elementAt(rowIndex: number, columnIndex: number): Result<V, string>` - Returns the element at the specified row and column
+- `rowSlice(rowIndex: number): Result<Array<V>, string>` - Returns a copy of the specified row
+- `rowSlices(): Array<Array<V>>` - Returns all rows as a 2D array
+- `columnSlice(columnIndex: number): Result<Array<V>, string>` - Returns a copy of the specified column
+- `columnSlices(): Array<Array<V>>` - Returns all columns as a 2D array
+- `copy(): DataFrame<V>` - Creates a copy of the DataFrame
+- `equals(other: DataFrame<V>): boolean` - Checks if this DataFrame equals another DataFrame
 
 ### Data Modification Methods
 
-- `setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>`
-- `insertRowBefore(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string>`
-- `pushRow(row: Array<V>): Result<DataFrame<V>, string>`
-- `insertColumnBefore(columnIndex: number, column: Array<V>): Result<DataFrame<V>, string>`
-- `pushColumn(column: Array<V>): Result<DataFrame<V>, string>`
-- `deleteRowAt(rowIndex: number): Result<DataFrame<V>, string>`
-- `deleteColumnAt(columnIndex: number): Result<DataFrame<V>, string>`
+- `setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>` - Sets the value at the specified row and column
+- `insertRowBefore(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string>` - Inserts a row before the specified index
+- `pushRow(row: Array<V>): Result<DataFrame<V>, string>` - Adds a row at the end of the DataFrame
+- `insertColumnBefore(columnIndex: number, column: Array<V>): Result<DataFrame<V>, string>` - Inserts a column before the specified index
+- `pushColumn(column: Array<V>): Result<DataFrame<V>, string>` - Adds a column at the end of the DataFrame
+- `deleteRowAt(rowIndex: number): Result<DataFrame<V>, string>` - Deletes the row at the specified index
+- `deleteColumnAt(columnIndex: number): Result<DataFrame<V>, string>` - Deletes the column at the specified index
 
 ### Data Transformation Methods
 
-- `transpose(): DataFrame<V>`
-- `mapRow(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>`
-- `mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>`
-- `mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>`
-- `mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>`
+- `transpose(): DataFrame<V>` - Transposes the DataFrame (rows become columns and columns become rows)
+- `mapRow(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and returns a new DataFrame
+- `mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and modifies the original DataFrame
+- `mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and returns a new DataFrame
+- `mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and modifies the original DataFrame
 
 ### Tagging Methods
 
-- `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string>`
-- `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>`
-- `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>`
+- `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
+- `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
+- `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific cell with a name-value pair
+
+The `TagValue` type represents values that can be used as tags. The library includes several coordinate types:
+- `RowCoordinate` - Represents a coordinate for a tag on an entire row
+- `ColumnCoordinate` - Represents a coordinate for a tag on an entire column
+- `CellCoordinate` - Represents a coordinate for a tag on a specific cell
+
+The `Tags` class provides methods for managing collections of tags:
+- `Tags.with<T>(...tag: Array<Tag<T, TagCoordinate>>)` - Creates a Tags object with the specified tags
+- `Tags.empty<T, C>()` - Creates an empty Tags object
+- `add(name, value, coordinate)` - Adds a new tag if it doesn't already exist
+- `replace(name, value, coordinate)` - Replaces an existing tag
+- `addOrReplace(name, value, coordinate)` - Adds a new tag or replaces an existing one
+- `remove(id)` - Removes a tag by ID
 
 ## Contributing
 

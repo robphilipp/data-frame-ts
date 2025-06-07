@@ -210,6 +210,14 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * Return all the tags that meet the condition of the specified predicate
      * @param predicate The predicate that determines which tags are returned
      * @return An array of {@link Tag}s that meet the condition in the specified predicate
+     *
+     * @example
+     * ```typescript
+     * // find all the tags that end with a number
+     * const rowTags = tags.filter(tag => /[0-9]+$/.test(tag.name))
+     * expect(rowTags.length).toBe(1)
+     * expect(rowTags[0].name).toBe("my-row-tag-1")
+     * ```
      */
     public filter(predicate: (tag: Tag<T, C>) => boolean): Array<Tag<T, C>> {
         return this.tags.filter(tag => predicate(tag))
@@ -313,9 +321,9 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      */
     public addOrReplace(name: string, value: T, coordinate: C): Tags<T, C> {
         if (this.hasTagFor(name, coordinate)) {
-            return this.replace(name, value, coordinate).getOrDefault(this.copy())
+            return this.replace(name, value, coordinate).getOrElse(this.copy())
         }
-        return this.add(name, value, coordinate).getOrDefault(this.copy())
+        return this.add(name, value, coordinate).getOrElse(this.copy())
     }
 
     /**
@@ -334,7 +342,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
             return successResult(tagsObject)
         }
         return failureResult(
-            `Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: ${id}`
+            `(Tags::remove) Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: ${id}`
         )
     }
 
@@ -387,32 +395,20 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     public uniqueTagFor(name: string, coordinate: C): Result<Tag<T, C>, string> {
         const tags = this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate))
         if (tags.length === 0) {
-            return failureResult(`No tag with specified name and coordinate found; name: ${name}; coordinate: ${coordinate.toString()}`)
+            return failureResult(
+                `(Tags::uniqueTagFor) No tag with specified name and coordinate found; ` +
+                `name: ${name}; coordinate: ${coordinate.toString()}`
+            )
         }
         if (tags.length > 1) {
-            return failureResult(`Multiple tags with specified name and coordinate found; name: ${name}; coordinate: ${coordinate.toString()}`)
+            return failureResult(
+                `(Tags::uniqueTagFor) Multiple tags with specified name and coordinate found; ` +
+                `name: ${name}; coordinate: ${coordinate.toString()}`
+            )
         }
         return successResult(tags[0])
     }
 }
-
-/**
- * Represents a collection of tags associated with rows in a data frame.
- * @template T The type of the tags' values
- */
-export type RowTags<T extends TagValue> = Tags<T, RowCoordinate>
-
-/**
- * Represents a collection of tags associated with columns in a data frame.
- * @template T The type of the tags' values
- */
-export type ColumnTags<T extends TagValue> = Tags<T, ColumnCoordinate>
-
-/**
- * Represents a collection of tags associated with cells in a data frame.
- * @template T The type of the tags' values
- */
-export type CellTags<T extends TagValue> = Tags<T, CellCoordinate>
 
 /**
  * Class that represents a coordinate for a tag on an entire row. Use the

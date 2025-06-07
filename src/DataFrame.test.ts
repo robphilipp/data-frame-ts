@@ -4,7 +4,7 @@ describe("Testing data-frame behavior", () => {
     describe("Creating data-frames", () => {
 
         test("should create a data-frame when dimensions are valid", () => {
-            const result = DataFrame.from([
+            const result = DataFrame.from<number>([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
@@ -49,6 +49,29 @@ describe("Testing data-frame behavior", () => {
             ])
             expect(result.failed).toBe(true)
             expect(result.error).toEqual("(DataFrame.validateDimensions) All columns must have the same number of rows; min_num_rows: 3, maximum_rows: 4")
+        })
+
+        test("should be able to create a table with various data types", () => {
+            const dataFrame = DataFrame.from<number | string>([
+                [1, "2", 3],
+                [4, "5", 6],
+                [7, "8", 9],
+                [10, "11", 12]
+            ]).getOrThrow()
+            expect(dataFrame.rowCount()).toEqual(4)
+            expect(dataFrame.columnCount()).toEqual(3)
+            expect(dataFrame.elementAt(0, 0).getOrThrow()).toEqual(1)
+            expect(typeof dataFrame.elementAt(0, 0).getOrThrow()).toEqual("number")
+            expect(dataFrame.elementAt(0, 1).getOrThrow()).toEqual("2")
+            expect(typeof dataFrame.elementAt(0, 1).getOrThrow()).toEqual("string")
+
+            const transposed = dataFrame.transpose()
+            expect(transposed.rowCount()).toEqual(3)
+            expect(transposed.columnCount()).toEqual(4)
+            expect(transposed.elementAt(0, 0).getOrThrow()).toEqual(1)
+            expect(typeof transposed.elementAt(0, 0).getOrThrow()).toEqual("number")
+            expect(transposed.elementAt(1, 0).getOrThrow()).toEqual("2")
+            expect(typeof transposed.elementAt(1, 0).getOrThrow()).toEqual("string")
         })
     })
 
@@ -280,59 +303,62 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to delete a row from end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.deleteRowAt(3).getOrThrow()
-            expect(updated.rowCount()).toEqual(3)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
             ]).getOrThrow()
+            const updated = dataFrame.deleteRowAt(3).getOrThrow()
+            expect(updated.rowCount()).toEqual(3)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to insert a column at beginning", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.insertColumnBefore(0, [100, 200, 300, 400]).getOrThrow()
-            expect(updated.columnCount()).toEqual(4)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [100, 1, 2, 3],
                 [200, 4, 5, 6],
                 [300, 7, 8, 9],
                 [400, 10, 11, 12]
             ]).getOrThrow()
+            const updated = dataFrame.insertColumnBefore(0, [100, 200, 300, 400]).getOrThrow()
+            expect(updated.columnCount()).toEqual(4)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to insert a column at the end", () => {
-            const dataFrame = DataFrame.from([
+            const data = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
                 [10, 11, 12]
-            ]).getOrThrow()
-            const updated = dataFrame.pushColumn([100, 200, 300, 400]).getOrThrow()
-            expect(updated.columnCount()).toEqual(4)
+            ]
+            const dataFrame = DataFrame.from(data).getOrThrow()
             const expected = DataFrame.from([
                 [1, 2, 3, 100],
                 [4, 5, 6, 200],
                 [7, 8, 9, 300],
                 [10, 11, 12, 400]
             ]).getOrThrow()
+            const updated = dataFrame.pushColumn([100, 200, 300, 400]).getOrThrow()
+            expect(updated.columnCount()).toEqual(4)
             expect(updated.equals(expected)).toBe(true)
-            expect(updated.equals(dataFrame)).toBe(false)
+            expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
         })
 
         test("should be able to delete a column from beginning", () => {
@@ -342,14 +368,14 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9],
                 [10, 11, 12]
             ]).getOrThrow()
-            const updated = dataFrame.deleteColumnAt(0).getOrThrow()
-            expect(updated.columnCount()).toEqual(2)
             const expected = DataFrame.from([
                 [2, 3],
                 [5, 6],
                 [8, 9],
                 [11, 12]
             ]).getOrThrow()
+            const updated = dataFrame.deleteColumnAt(0).getOrThrow()
+            expect(updated.columnCount()).toEqual(2)
             expect(updated.equals(expected)).toBe(true)
             expect(updated.equals(dataFrame)).toBe(false)
         })
@@ -369,9 +395,7 @@ describe("Testing data-frame behavior", () => {
                 [3, 6, 9, 12]
             ]).getOrThrow()
             const transposed = dataFrame.transpose()
-            expect(transposed.rowCount()).toEqual(3)
-            expect(transposed.columnCount()).toEqual(4)
-            expect(transposed.equals(expected)).toBe(true)
+            expect(transposed).toEqual(expected)
         })
     })
 
