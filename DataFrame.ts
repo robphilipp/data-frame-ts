@@ -1,5 +1,16 @@
 import {failureResult, Result, successResult} from "result-fn";
-import {CellCoordinate, ColumnCoordinate, RowCoordinate, TagCoordinate, Tags, TagValue} from "./tags";
+import {
+    CellCoordinate,
+    ColumnCoordinate, isCellTag, isColumnTag, isRowTag,
+    newCellTag,
+    newColumnTag,
+    newRowTag,
+    RowCoordinate,
+    Tag,
+    TagCoordinate,
+    Tags,
+    TagValue
+} from "./tags";
 
 /**
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
@@ -1014,8 +1025,7 @@ export class DataFrame<V> {
                 tag_value: ${tag.toString()}; valid_index_range: (0, ${this.numRows - 1}).`
             )
         }
-        const rowCoordinate = RowCoordinate.of(rowIndex)
-        this.tags = this.tags.addOrReplace(name, tag, rowCoordinate)
+        this.tags = this.tags.addOrReplace(newRowTag(name, tag, RowCoordinate.of(rowIndex)))
         return successResult(this as DataFrame<V>)
     }
 
@@ -1036,8 +1046,7 @@ export class DataFrame<V> {
                 tag_value: ${tag.toString()}; valid_index_range: (0, ${this.numColumns - 1}).`
             )
         }
-        const columnCoordinate = ColumnCoordinate.of(columnIndex)
-        this.tags = this.tags.addOrReplace(name, tag, columnCoordinate)
+        this.tags = this.tags.addOrReplace(newColumnTag(name, tag, ColumnCoordinate.of(columnIndex)))
         return successResult(this as DataFrame<V>)
     }
 
@@ -1064,9 +1073,151 @@ export class DataFrame<V> {
                 `(DataFrame::tagCell) Column index for cell tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; `
             )
         }
-        this.tags = this.tags.addOrReplace(name, tag, CellCoordinate.of(rowIndex, columnIndex))
+        this.tags = this.tags.addOrReplace(newCellTag(name, tag, CellCoordinate.of(rowIndex, columnIndex)))
         return successResult(this as DataFrame<V>)
     }
+
+    /**
+     * Returns an array of {@link Tag} object that meet the criteria specified in the {@link predicate}
+     * @param predicate A function that returns `true` if the supplied {@link Tag} meets the criteria; otherwise returns `false`
+     * @return An array of {@link Tag} objects that meet the specified predicate
+     */
+    public filterTags(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, TagCoordinate>> {
+        return this.tags.filter(predicate)
+    }
+
+    // public filterTagsBy<C extends TagCoordinate>(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, C>> {
+    //     return this.tags
+    //         .filter(tag => predicate(tag) && tag.coordinate as C !== null)
+    //         .map(tag => tag as Tag<TagValue, C>)
+    // }
+
+    public hasRowTagFor(name: string, rowIndex: number): boolean {
+        return this.tags.hasTagFor(name, RowCoordinate.of(rowIndex))
+    }
+
+    public hasUniqueRowTagFor(name: string, rowIndex: number): boolean {
+        return this.tags.hasUniqueTagFor(name, RowCoordinate.of(rowIndex))
+    }
+
+    public hasRowTagsWithName(name: string): boolean {
+        return this.tags.filter(tag => tag.name === name && isRowTag(tag)).length > 0
+    }
+
+    public rowTagsFor(name: string, rowIndex: number): Array<Tag<TagValue, RowCoordinate>> {
+        return this.tags
+            .filter(tag => {
+                return isRowTag(tag) &&
+                    tag.name === name &&
+                    tag.coordinate === RowCoordinate.of(rowIndex)
+            }) as Array<Tag<TagValue, RowCoordinate>>
+    }
+
+    public hasColumnTagFor(name: string, columnIndex: number): boolean {
+        return this.tags.hasTagFor(name, ColumnCoordinate.of(columnIndex))
+    }
+
+    public hasUniqueColumnTagFor(name: string, columnIndex: number): boolean {
+        return this.tags.hasUniqueTagFor(name, ColumnCoordinate.of(columnIndex))
+    }
+
+    public hasColumnTagsWithName(name: string): boolean {
+        return this.tags.filter(tag => tag.name === name && isColumnTag(tag)).length > 0
+    }
+
+    public columnTagsFor(name: string, columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>> {
+        return this.tags
+            .filter(tag => {
+                return isColumnTag(tag) &&
+                    tag.name === name &&
+                    tag.coordinate === ColumnCoordinate.of(columnIndex)
+            }) as Array<Tag<TagValue, ColumnCoordinate>>
+    }
+
+    public hasCellTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
+        return this.tags.hasTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
+    }
+
+    public hasUniqueCellTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
+        return this.tags.hasUniqueTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
+    }
+
+    public hasCellTagsWithName(name: string): boolean {
+        return this.tags.filter(tag => tag.name === name && isCellTag(tag)).length > 0
+    }
+
+    public cellTagsFor(name: string, row: number, column: number): Array<Tag<TagValue, CellCoordinate>> {
+        return this.tags
+            .filter(tag => {
+                return isCellTag(tag) &&
+                    tag.name === name &&
+                    tag.coordinate === CellCoordinate.of(row, column)
+            }) as Array<Tag<TagValue, CellCoordinate>>
+    }
+
+    // /**
+    //  * Determines whether at least one tag has the specified name and coordinates.
+    //  * @param name The tag's name
+    //  * @param coordinate The tag's coordinate
+    //  * @return `true` if there is at least one tag that matches the specified name and coordinate.
+    //  * If there are no matches, then returns `false`.
+    //  */
+    // public hasTagCellFor(name: string, coordinate: CellCoordinate): boolean {
+    //     return this.tags.hasTagFor(name, coordinate)
+    // }
+    //
+    // /**
+    //  * Determines whether there is one and only one tag that has the specified name and coordinates.
+    //  * @param name The tag's name
+    //  * @param coordinate The tag's coordinate
+    //  * @return `true` if there is exactly one tag that matches the specified name and coordinate.
+    //  * If there are no matches, or more tha one match, then returns `false`.
+    //  */
+    // public hasUniqueTagFor(name: string, coordinate: C): boolean {
+    //     return this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate)).length === 1
+    // }
+    //
+    // /**
+    //  * Determines whether there exists a tag with the specified name
+    //  * @param name The tag's name
+    //  * @return `true` if there exists at least one tag with the specified name; `false` otherwise
+    //  */
+    // public hasTagWithName(name: string): boolean {
+    //     return this.tags.some(tag => tag.name === name)
+    // }
+    //
+    // /**
+    //  * Finds all the tags that have the specified coordinate and returns them.
+    //  * @param coordinate The coordinate on which to filter the tags
+    //  * @return An array of tags that match the specified coordinate
+    //  */
+    // public tagsForCoordinate(coordinate: C): Array<Tag<T, C>> {
+    //     return this.filter(tag => tag.coordinate.equals(coordinate))
+    // }
+    //
+    // /**
+    //  * Finds the unique tag with the specified name and coordinate.
+    //  * @param name The tag's name
+    //  * @param coordinate The tag's coordinate
+    //  * @return A Result containing the unique tag if exactly one is found, or an error message if none or multiple are found
+    //  */
+    // public uniqueTagFor(name: string, coordinate: C): Result<Tag<T, C>, string> {
+    //     const tags = this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate))
+    //     if (tags.length === 0) {
+    //         return failureResult(
+    //             `(Tags::uniqueTagFor) No tag with specified name and coordinate found; ` +
+    //             `name: ${name}; coordinate: ${coordinate.toString()}`
+    //         )
+    //     }
+    //     if (tags.length > 1) {
+    //         return failureResult(
+    //             `(Tags::uniqueTagFor) Multiple tags with specified name and coordinate found; ` +
+    //             `name: ${name}; coordinate: ${coordinate.toString()}`
+    //         )
+    //     }
+    //     return successResult(tags[0])
+    // }
+
 }
 
 type Bounds = { min: number, max: number }
