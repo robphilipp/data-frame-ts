@@ -94,6 +94,11 @@ export class RowTag<T extends TagValue> extends Tag<T, RowCoordinate> {
     }
 }
 
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link RowTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link RowTag}; `false` otherwise
+ */
 export function isRowTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is RowTag<V> {
     return (tag as RowTag<V>).isRowTag !== undefined
 }

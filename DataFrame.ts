@@ -1081,16 +1081,37 @@ export class DataFrame<V> {
      * Returns an array of {@link Tag} object that meet the criteria specified in the {@link predicate}
      * @param predicate A function that returns `true` if the supplied {@link Tag} meets the criteria; otherwise returns `false`
      * @return An array of {@link Tag} objects that meet the specified predicate
+     * @example
+     * ```typescript
+     * // create a simple data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9]
+     * ]).getOrThrow()
+     *
+     * // add a row tag, a column tag, and a cell tag
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .getOrThrow()
+     *
+     * // the row tag has a name "row-tag", so filter by that name
+     * const rowTags = taggedDataFrame.filterTags(tag => tag.name === "row-tag")
+     *
+     * // there should only be one tag, with the name "row-tag", the value
+     * // "row-value", that is a RowTag for the 0th row.
+     * expect(rowTags.length).toBe(1)
+     * expect(rowTags[0].name).toBe("row-tag")
+     * expect(rowTags[0].value).toBe("row-value")
+     * expect((rowTags[0] as RowTag<string>).isRowTag()).toBeTruthy()
+     * expect((rowTags[0] as RowTag<string>).coordinate.toString()).toBe("(0, *)")
+     * ```
      */
     public filterTags(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, TagCoordinate>> {
         return this.tags.filter(predicate)
     }
-
-    // public filterTagsBy<C extends TagCoordinate>(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, C>> {
-    //     return this.tags
-    //         .filter(tag => predicate(tag) && tag.coordinate as C !== null)
-    //         .map(tag => tag as Tag<TagValue, C>)
-    // }
 
     public hasRowTagFor(name: string, rowIndex: number): boolean {
         return this.tags.hasTagFor(name, RowCoordinate.of(rowIndex))

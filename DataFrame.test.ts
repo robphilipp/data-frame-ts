@@ -1,4 +1,16 @@
 import {DataFrame} from "./DataFrame";
+import {
+    CellCoordinate,
+    CellTag,
+    ColumnCoordinate,
+    ColumnTag,
+    isCellTag,
+    isColumnTag,
+    isRowTag, newCellTag, newColumnTag,
+    newRowTag,
+    RowCoordinate,
+    RowTag
+} from "./tags";
 
 describe("Testing data-frame behavior", () => {
     describe("Creating data-frames", () => {
@@ -712,21 +724,68 @@ describe("Testing data-frame behavior", () => {
                 [7, 8, 9]
             ]).getOrThrow()
 
-            const result = dataFrame
+            const taggedDataFrame = dataFrame
                 .tagRow(0, "row-tag", "row-value")
-                .getOrThrow()
-                .tagColumn(1, "column-tag", "column-value")
-                .getOrThrow()
-                .tagCell(2, 2, "cell-tag", "cell-value")
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
                 .getOrThrow()
 
             // Verify the result is a DataFrame
-            expect(result).toBeDefined()
-            expect(result.rowCount()).toBe(3)
-            expect(result.columnCount()).toBe(3)
-            expect(result.hasCellTagFor("cell-tag", 2, 2)).toBe(true)
-            expect(result.hasColumnTagFor("column-tag", 1)).toBe(true)
-            expect(result.hasRowTagFor("row-tag", 0)).toBe(true)
+            expect(taggedDataFrame).toBeDefined()
+            expect(taggedDataFrame.rowCount()).toBe(3)
+            expect(taggedDataFrame.columnCount()).toBe(3)
+            expect(taggedDataFrame.hasCellTagFor("cell-tag", 2, 2)).toBe(true)
+            expect(taggedDataFrame.hasColumnTagFor("column-tag", 1)).toBe(true)
+            expect(taggedDataFrame.hasRowTagFor("row-tag", 0)).toBe(true)
+        })
+
+        describe("Testing categorization functions", () => {
+            const rowTag = newRowTag("row-tag", "row-value", RowCoordinate.of(3))
+            const columnTag = newColumnTag("column-tag", "column-value", ColumnCoordinate.of(3))
+            const cellTag = newCellTag("row-tag", "row-value", CellCoordinate.of(3, 4))
+
+            test("should be able to determine if a tag is a row-tag", () => {
+                expect(isRowTag(rowTag)).toBeTruthy()
+                expect(isRowTag(columnTag)).toBeFalsy()
+                expect(isRowTag(cellTag)).toBeFalsy()
+            })
+
+        })
+
+        test("should be able to filter by tag", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ]).getOrThrow()
+            const taggedDataFrame = dataFrame
+                .tagRow(0, "row-tag", "row-value")
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+                .getOrThrow()
+            const rowTags = taggedDataFrame.filterTags(tag => tag.name === "row-tag")
+            expect(rowTags.length).toBe(1)
+            expect(rowTags[0].name).toBe("row-tag")
+            expect(rowTags[0].value).toBe("row-value")
+            expect((rowTags[0] as RowTag<string>).isRowTag()).toBeTruthy()
+            expect((rowTags[0] as RowTag<string>).coordinate.toString()).toBe("(0, *)")
+            expect(isRowTag(rowTags[0])).toBeTruthy()
+
+            const columnTags = taggedDataFrame.filterTags(tag => tag.name === "column-tag")
+            expect(columnTags.length).toBe(1)
+            expect(columnTags[0].name).toBe("column-tag")
+            expect(columnTags[0].value).toBe("column-value")
+            expect((columnTags[0] as ColumnTag<string>).isColumnTag()).toBeTruthy()
+            expect((columnTags[0] as ColumnTag<string>).coordinate.toString()).toBe("(*, 1)")
+            expect(isColumnTag(columnTags[0])).toBeTruthy()
+
+            const cellTags = taggedDataFrame.filterTags(tag => tag.name === "cell-tag")
+            expect(cellTags.length).toBe(1)
+            expect(cellTags[0].name).toBe("cell-tag")
+            expect(cellTags[0].value).toBe("cell-value")
+            expect((cellTags[0] as CellTag<string>).isCellTag()).toBeTruthy()
+            expect((cellTags[0] as CellTag<string>).coordinate.toString()).toBe("(2, 2)")
+            expect(isCellTag(cellTags[0])).toBeTruthy()
         })
     })
 })
