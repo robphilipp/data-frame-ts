@@ -1198,6 +1198,32 @@ export class DataFrame<V> {
      * Retrieves all the {@link RowTag} objects associated with the specified row index
      * @param rowIndex The index of the row to which the row tags apply
      * @return An array of the {@link RowTag} objects associated with the specified row index
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // retrieve the row-tags for the first row, of which there are two
+     * const tags = taggedDataFrame.rowTagsFor(0)
+     *
+     * expect(tags).toHaveLength(2)
+     * expect(tags[0].name).toEqual("row-tag")
+     * expect(tags[0].value).toEqual("row-value")
+     * expect(tags[1].name).toEqual("row-tag-2")
+     * expect(tags[1].value).toEqual("row-value")
+     * ```
      */
     public rowTagsFor(rowIndex: number): Array<Tag<TagValue, RowCoordinate>> {
         return this.tags.filter(tag => {
@@ -1206,6 +1232,34 @@ export class DataFrame<V> {
         }) as Array<Tag<TagValue, RowCoordinate>>
     }
 
+    /**
+     * Retrieves all the {@link ColumnTag} objects associated with the specified column index
+     * @param columnIndex The index of the column to which the column tags apply
+     * @return An array of the {@link ColumnTag} objects associated with the specified column index
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // retrieve the column-tag for the second column, of which there is one
+     * const tags = taggedDataFrame.columnTagsFor(1)
+     * expect(tags).toHaveLength(1)
+     * expect(tags[0].name).toEqual("column-tag")
+     * expect(tags[0].value).toEqual("column-value")
+     * ```
+     */
     public columnTagsFor(columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>> {
         return this.tags.filter(tag => {
             const [, column] = tag.coordinate.coordinate()
@@ -1213,19 +1267,236 @@ export class DataFrame<V> {
         }) as Array<Tag<TagValue, ColumnCoordinate>>
     }
 
+    /**
+     * Retrieves all the {@link CellTag} objects associated with the specified (row, column) index
+     * @param rowIndex The index of the row to which the row tags apply
+     * @param columnIndex The index of the column to which the column tags apply
+     * @return An array of the {@link CellTag} objects associated with the specified (row, column) index
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // retrieve the cell-tag for the third row and third column, of which there is one
+     * let tags = taggedDataFrame.cellTagsFor(2, 2)
+     * expect(tags).toHaveLength(1)
+     * expect(tags[0].name).toEqual("cell-tag")
+     * expect(tags[0].value).toEqual("cell-value")
+     * expect(isCellTag(tags[0])).toBeTruthy()
+     *
+     * // there is no cell-tag at (1, 2), although there is a row-tag
+     * tags = taggedDataFrame.cellTagsFor(1, 2)
+     * expect(tags).toHaveLength(0)
+     * ```
+     */
+    public cellTagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, CellCoordinate>> {
+        return this.tags.filter(tag => {
+            const [row, column] = tag.coordinate.coordinate()
+            return isCellTag(tag) && row === rowIndex && column === columnIndex
+        }) as Array<Tag<TagValue, CellCoordinate>>
+    }
+
+    /**
+     * Retrieves all the {@link RowTag}, {@link ColumnTag}, or {@link CellTag} objects associated with the
+     * specified (row, column) index
+     * @param rowIndex The index of the row to which the row tags apply
+     * @param columnIndex The index of the column to which the column tags apply
+     * @return An array of the {@link RowTag}, {@link ColumnTag}, or {@link CellTag} objects associated
+     * with the specified (row, column) index
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // retrieve the cell-tag for the third row and third column, of which there is one
+     * let tags = taggedDataFrame.tagsFor(2, 2)
+     * expect(tags).toHaveLength(1)
+     * expect(tags[0].name).toEqual("cell-tag")
+     * expect(tags[0].value).toEqual("cell-value")
+     *
+     * // retrieve the row-tag for the cell in the second row and third column
+     * tags = taggedDataFrame.tagsFor(1, 2)
+     * expect(tags).toHaveLength(1)
+     * expect(tags[0].name).toEqual("row-tag-2")
+     * expect(tags[0].value).toEqual("row-value")
+     * expect(isRowTag(tags[0])).toBeTruthy()
+     * ```
+     */
     public tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>> {
+        if (rowIndex < 0 || rowIndex >= this.numRows || columnIndex < 0 || columnIndex >= this.numColumns) {
+            return []
+        }
         return this.tags.tagsFor(rowIndex, columnIndex)
     }
 
-
+    /**
+     * Reports whether the row with the specified index has a row-tag. When specifying
+     * row-indexes that are out of bounds, reports that no tag exists but doesn't fail.
+     * Because there are no rows with out-of-bound indexes, there are no tags.
+     * @param rowIndex The index of the row to check for tags.
+     * @return `true` if the specified row has one or more row-tags;`false` otherwise
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // ask about which rows are tagged with a row-tag
+     * expect(taggedDataFrame.hasRowTagFor(0)).toBeTruthy()  // row-tag, row-tag2
+     * expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()  // row-tag2
+     * expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
+     * expect(taggedDataFrame.hasRowTagFor(3)).toBeFalsy()
+     *
+     * expect(taggedDataFrame.hasRowTagFor(-4)).toBeFalsy() // row doesn't exist
+     * expect(taggedDataFrame.hasRowTagFor(400)).toBeFalsy() // row doesn't exist
+     * ```
+     */
     public hasRowTagFor(rowIndex: number): boolean {
         return this.rowTagsFor(rowIndex).length > 0
     }
 
+    /**
+     * Reports whether the column with the specified index has a column-tag. When specifying
+     * column-indexes that are out of bounds, reports that no tag exists but doesn't fail.
+     * Because there are no columns with out-of-bound indexes, there are no tags.
+     * @param columnIndex The index of the column to check for tags.
+     * @return `true` if the specified row has one or more column-tags; `false` otherwise
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // ask about which columns are tagged with a column-tag
+     * expect(taggedDataFrame.hasColumnTagFor(0)).toBeFalsy()  // column-tag
+     * expect(taggedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+     * expect(taggedDataFrame.hasColumnTagFor(2)).toBeFalsy()
+     *
+     * expect(taggedDataFrame.hasColumnTagFor(-4)).toBeFalsy() // column doesn't exist
+     * expect(taggedDataFrame.hasColumnTagFor(400)).toBeFalsy() // column doesn't exist
+     * ```
+     */
     public hasColumnTagFor(columnIndex: number): boolean {
         return this.columnTagsFor(columnIndex).length > 0
     }
 
+    /**
+     * Reports whether the cell with the specified index has a cell-tag. When specifying
+     * indexes that are out of bounds, reports that no tag exists but doesn't fail.
+     * Because there are no cells with out-of-bound indexes, there are no tags.
+     * @param columnIndex The index of the column to check for tags.
+     * @param rowIndex The index of the row to check for tags.
+     * @return `true` if the specified row has one or more row-tags;`false` otherwise
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // ask about which cells are tagged with a cell-tag
+     * expect(taggedDataFrame.hasCellTagFor(2, 2)).toBeTruthy()  // cell-tag
+     * expect(taggedDataFrame.hasCellTagFor(1, 2)).toBeFalsy()
+     * expect(taggedDataFrame.hasCellTagFor(2, 1)).toBeFalsy()
+     *
+     * expect(taggedDataFrame.hasCellTagFor(-4, 1)).toBeFalsy() // cell doesn't exist
+     * expect(taggedDataFrame.hasCellTagFor(400, 1)).toBeFalsy() // cell doesn't exist
+     * ```
+     */
+    public hasCellTagFor(rowIndex: number, columnIndex: number): boolean {
+        return this.cellTagsFor(rowIndex, columnIndex).length > 0
+    }
+
+    /**
+     * Reports whether the cell with the specified index has a tag. In this case, the
+     * tag could be a {@link RowTag}, {@link ColumnTag} , or a {@link CellTag}. When specifying
+     * indexes that are out of bounds, reports that no tag exists but doesn't fail.
+     * Because there are no cells with out-of-bound indexes, there are no tags.
+     * @param columnIndex The index of the column to check for tags.
+     * @param rowIndex The index of the row to check for tags.
+     * @return `true` if the specified row has one or more row-tags;`false` otherwise
+     * @example
+     * ```typescript
+     * // create a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+     *     .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+     *     .getOrThrow()
+     *
+     * // ask about which cells are tagged
+     * expect(taggedDataFrame.hasTagFor(2, 2)).toBeTruthy()  // cell-tag
+     * expect(taggedDataFrame.hasTagFor(1, 2)).toBeTruthy()  // row-tag-2
+     * expect(taggedDataFrame.hasTagFor(2, 1)).toBeTruthy()   // column-tag
+     *
+     * expect(taggedDataFrame.hasTagFor(-4, 1)).toBeFalsy() // cell doesn't exist
+     * expect(taggedDataFrame.hasTagFor(400, 1)).toBeFalsy() // cell doesn't exist
+     * ```
+     */
     public hasTagFor(rowIndex: number, columnIndex: number): boolean {
         return this.tagsFor(rowIndex, columnIndex).length > 0
     }

@@ -812,7 +812,7 @@ describe("Testing data-frame behavior", () => {
             })
         })
 
-        describe("Retrieving cells based on tags", () => {
+        describe("Retrieving tags based on data-frame coordinates", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -843,9 +843,45 @@ describe("Testing data-frame behavior", () => {
                 expect(tags[0].name).toEqual("row-tag-2")
                 expect(tags[0].value).toEqual("row-value")
             })
+
+            test("should be able to retrieve the column tag for the second column", () => {
+                const tags = taggedDataFrame.columnTagsFor(1)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("column-tag")
+                expect(tags[0].value).toEqual("column-value")
+            })
+
+            test("should be able to retrieve the tag for the third row and third column", () => {
+                const tags = taggedDataFrame.tagsFor(2, 2)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("cell-tag")
+                expect(tags[0].value).toEqual("cell-value")
+                expect(isCellTag(tags[0])).toBeTruthy()
+            })
+
+            test("should be able to retrieve the cell tag for the third row and third column", () => {
+                const tags = taggedDataFrame.cellTagsFor(2, 2)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("cell-tag")
+                expect(tags[0].value).toEqual("cell-value")
+                expect(isCellTag(tags[0])).toBeTruthy()
+            })
+
+            test("should be able to retrieve the tag for the second row and third column", () => {
+                const tags = taggedDataFrame.tagsFor(1, 2)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("row-tag-2")
+                expect(tags[0].value).toEqual("row-value")
+                expect(isRowTag(tags[0])).toBeTruthy()
+            })
+
+            test("should not be able to retrieve a cell tag for the second row and third column", () => {
+                const tags = taggedDataFrame.cellTagsFor(1, 2)
+                expect(tags).toHaveLength(0)
+            })
         })
 
-        describe("Testing categorization functions", () => {
+        describe("Categorizing tags based on their type", () => {
             const rowTag = newRowTag("row-tag", "row-value", RowCoordinate.of(3))
             const columnTag = newColumnTag("column-tag", "column-value", ColumnCoordinate.of(3))
             const cellTag = newCellTag("row-tag", "row-value", CellCoordinate.of(3, 4))
@@ -854,6 +890,72 @@ describe("Testing data-frame behavior", () => {
                 expect(isRowTag(rowTag)).toBeTruthy()
                 expect(isRowTag(columnTag)).toBeFalsy()
                 expect(isRowTag(cellTag)).toBeFalsy()
+            })
+
+            test("should be able to determine if a tag is a column-tag", () => {
+                expect(isColumnTag(rowTag)).toBeFalsy()
+                expect(isColumnTag(columnTag)).toBeTruthy()
+                expect(isColumnTag(cellTag)).toBeFalsy()
+            })
+
+            test("should be able to determine if a tag is a cell-tag", () => {
+                expect(isCellTag(rowTag)).toBeFalsy()
+                expect(isCellTag(columnTag)).toBeFalsy()
+                expect(isCellTag(cellTag)).toBeTruthy()
+            })
+        })
+
+        describe("Determining whether parts of the data-frame are tags", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+
+            const taggedDataFrame = dataFrame
+                .tagRow(0, "row-tag", "row-value")
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+                .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+                .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+                .getOrThrow()
+
+            test("should be able to determine if a row is tagged with a row-tag", () => {
+                expect(taggedDataFrame.hasRowTagFor(0)).toBeTruthy()  // row-tag, row-tag2
+                expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()  // row-tag-2
+                expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
+                expect(taggedDataFrame.hasRowTagFor(3)).toBeFalsy()
+
+                expect(taggedDataFrame.hasRowTagFor(-4)).toBeFalsy() // row doesn't exist
+                expect(taggedDataFrame.hasRowTagFor(400)).toBeFalsy() // row doesn't exist
+            })
+
+            test("should be able to determine if a column is tagged with a column-tag", () => {
+                expect(taggedDataFrame.hasColumnTagFor(0)).toBeFalsy()  // column-tag
+                expect(taggedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+                expect(taggedDataFrame.hasColumnTagFor(2)).toBeFalsy()
+
+                expect(taggedDataFrame.hasColumnTagFor(-4)).toBeFalsy() // column doesn't exist
+                expect(taggedDataFrame.hasColumnTagFor(400)).toBeFalsy() // column doesn't exist
+            })
+
+            test("should be able to determine if a cell is tagged a cell-tag", () => {
+                expect(taggedDataFrame.hasCellTagFor(2, 2)).toBeTruthy()  // cell-tag
+                expect(taggedDataFrame.hasCellTagFor(1, 2)).toBeFalsy()
+                expect(taggedDataFrame.hasCellTagFor(2, 1)).toBeFalsy()
+
+                expect(taggedDataFrame.hasCellTagFor(-4, 1)).toBeFalsy() // cell doesn't exist
+                expect(taggedDataFrame.hasCellTagFor(400, 1)).toBeFalsy() // cell doesn't exist
+            })
+
+            test("should be able to determine if a cell is tagged", () => {
+                expect(taggedDataFrame.hasTagFor(2, 2)).toBeTruthy()  // cell-tag
+                expect(taggedDataFrame.hasTagFor(1, 2)).toBeTruthy()  // row-tag-2
+                expect(taggedDataFrame.hasTagFor(2, 1)).toBeTruthy()   // column-tag
+
+                expect(taggedDataFrame.hasTagFor(-4, 1)).toBeFalsy() // cell doesn't exist
+                expect(taggedDataFrame.hasTagFor(400, 1)).toBeFalsy() // cell doesn't exist
             })
         })
 

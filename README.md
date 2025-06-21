@@ -97,6 +97,9 @@ const dfWithoutColumn = df.deleteColumnAt(1).getOrThrow();
 // Transpose the DataFrame
 const transposed = df.transpose();
 
+// Map all elements in the DataFrame
+const stringDF = df.mapElements(value => value.toString());  // Convert all numbers to strings
+
 // Map a row (returns a new DataFrame)
 const mappedRow = df.mapRow(1, value => value * 2).getOrThrow();
 
@@ -115,6 +118,8 @@ const mappedColumnInPlace = df.mapColumnInPlace(1, value => value * 2).getOrThro
 ### Tagging
 
 The DataFrame supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the DataFrame (row, column, or cell).
+
+#### Adding Tags
 
 ```typescript
 // Tag a row
@@ -136,7 +141,65 @@ const taggedDf = df
     .getOrThrow();
 ```
 
-Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information.
+#### Retrieving Tags
+
+```typescript
+// Create a tagged DataFrame
+const dataFrame = DataFrame.from([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+    [10, 11, 12]
+]).getOrThrow();
+
+const taggedDataFrame = dataFrame
+    .tagRow(0, "row-tag", "row-value")
+    .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+    .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+    .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+    .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+    .getOrThrow();
+
+// Retrieve row tags
+const rowTags = taggedDataFrame.rowTagsFor(0);
+// rowTags contains two tags: "row-tag" and "row-tag-2"
+
+// Retrieve column tags
+const columnTags = taggedDataFrame.columnTagsFor(1);
+// columnTags contains one tag: "column-tag"
+
+// Retrieve cell tags
+const cellTags = taggedDataFrame.tagsFor(2, 2);
+// cellTags contains one tag: "cell-tag"
+
+// Check if a row has tags
+const hasRowTag = taggedDataFrame.hasRowTagFor(0);  // true
+const hasNoRowTag = taggedDataFrame.hasRowTagFor(2);  // false
+```
+
+Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows for flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
+
+#### Advanced Tag Operations
+
+```typescript
+// Filter tags based on a predicate
+const rowTags = taggedDataFrame.filterTags(tag => tag.name === "row-tag");
+// rowTags contains all tags with the name "row-tag"
+
+// Get cells tagged with a specific tag
+const tag = newRowTag("row-tag", "row-value", RowCoordinate.of(0));
+const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow();
+// cellValues contains all cells in the row tagged with "row-tag"
+
+// Check if a column has tags
+const hasColumnTag = taggedDataFrame.hasColumnTagFor(1);  // true if column 1 has tags
+
+// Check if a cell has tags
+const hasCellTag = taggedDataFrame.hasCellTagFor(2, 2);  // true if cell at (2,2) has tags
+
+// Check if a position has any tags (row, column, or cell)
+const hasAnyTag = taggedDataFrame.hasTagFor(1, 1);  // true if position (1,1) has any tags
+```
 
 ### Error Handling
 
@@ -200,6 +263,7 @@ try {
 ### Data Transformation Methods
 
 - `transpose(): DataFrame<V>` - Transposes the DataFrame (rows become columns and columns become rows)
+- `mapElements<U>(mapper: (value: V, rowIndex: number, columnIndex: number) => U): DataFrame<U>` - Applies a function to each element in the DataFrame and returns a new DataFrame
 - `mapRow(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and returns a new DataFrame
 - `mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and modifies the original DataFrame
 - `mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and returns a new DataFrame
@@ -210,6 +274,22 @@ try {
 - `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
 - `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
 - `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific cell with a name-value pair
+- `rowTagsFor(rowIndex: number): Array<Tag<TagValue, RowCoordinate>>` - Retrieves all row tags associated with the specified row index
+- `columnTagsFor(columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>>` - Retrieves all column tags associated with the specified column index
+- `cellTagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, CellCoordinate>>` - Retrieves all cell-specific tags associated with the specified (row, column) index
+- `tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>>` - Retrieves all tags (row, column, and cell) associated with the specified (row, column) index
+- `hasRowTagFor(rowIndex: number): boolean` - Reports whether the row with the specified index has any row tags
+- `hasColumnTagFor(columnIndex: number): boolean` - Reports whether the column with the specified index has any column tags
+- `hasCellTagFor(rowIndex: number, columnIndex: number): boolean` - Reports whether the cell with the specified (row, column) index has any cell tags
+- `hasTagFor(rowIndex: number, columnIndex: number): boolean` - Reports whether the cell with the specified (row, column) index has any tags (row, column, or cell)
+- `hasUniqueRowTagFor(name: string, rowIndex: number): boolean` - Reports whether there is exactly one row tag with the specified name for the specified row
+- `hasUniqueColumnTagFor(name: string, columnIndex: number): boolean` - Reports whether there is exactly one column tag with the specified name for the specified column
+- `hasCellUniqueTagFor(name: string, rowIndex: number, columnIndex: number): boolean` - Reports whether there is exactly one cell tag with the specified name for the specified cell
+- `hasRowTagsWithName(name: string): boolean` - Reports whether there are any row tags with the specified name
+- `hasColumnTagsWithName(name: string): boolean` - Reports whether there are any column tags with the specified name
+- `hasCellTagsWithName(name: string): boolean` - Reports whether there are any cell tags with the specified name
+- `filterTags(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, TagCoordinate>>` - Returns an array of tags that meet the criteria specified in the predicate
+- `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` - Returns an array of cell values that are tagged with the specified tag
 
 The `TagValue` type represents values that can be used as tags. The library includes several coordinate types:
 - `RowCoordinate` - Represents a coordinate for a tag on an entire row
