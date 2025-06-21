@@ -618,20 +618,19 @@ describe("Testing data-frame behavior", () => {
 
     describe("Testing tagging functionality", () => {
         test("should be able to tag a row", () => {
-            const dataFrame = DataFrame.from([
+            const taggedDataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
-            ]).getOrThrow()
-
-            const result = dataFrame.tagRow(1, "row-tag", "row-value").getOrThrow()
+            ]).flatMap(df => df.tagRow(1, "row-tag", "row-value"))
+                .getOrThrow()
 
             // Verify the result is a DataFrame
-            expect(result).toBeDefined()
-            expect(result.rowCount()).toBe(3)
-            expect(result.columnCount()).toBe(3)
-            expect(result.hasRowTagFor(1)).toBeTruthy()
-            expect(result.hasRowTagFor(2)).toBeFalsy()
+            expect(taggedDataFrame).toBeDefined()
+            expect(taggedDataFrame.rowCount()).toBe(3)
+            expect(taggedDataFrame.columnCount()).toBe(3)
+            expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()
+            expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
         })
 
         test("should return error when tagging row with invalid index", () => {
@@ -648,46 +647,42 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to tag a column", () => {
-            const dataFrame = DataFrame.from([
+            const taggedDataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
-            ]).getOrThrow()
-
-            const result = dataFrame.tagColumn(1, "column-tag", "column-value").getOrThrow()
+            ]).flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .getOrThrow()
 
             // Verify the result is a DataFrame
-            expect(result).toBeDefined()
-            expect(result.rowCount()).toBe(3)
-            expect(result.columnCount()).toBe(3)
+            expect(taggedDataFrame).toBeDefined()
+            expect(taggedDataFrame.rowCount()).toBe(3)
+            expect(taggedDataFrame.columnCount()).toBe(3)
         })
 
         test("should return error when tagging column with invalid index", () => {
-            const dataFrame = DataFrame.from([
+            const taggedDataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
-            ]).getOrThrow()
+            ]).flatMap(df => df.tagColumn(5, "column-tag", "column-value"))
 
-            const result = dataFrame.tagColumn(5, "column-tag", "column-value")
-
-            expect(result.failed).toBe(true)
-            expect(result.error).toContain("Column index for column tag is out of bounds")
+            expect(taggedDataFrame.failed).toBe(true)
+            expect(taggedDataFrame.error).toContain("Column index for column tag is out of bounds")
         })
 
         test("should be able to tag a cell", () => {
-            const dataFrame = DataFrame.from([
+            const taggedDataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
-            ]).getOrThrow()
-
-            const result = dataFrame.tagCell(1, 2, "cell-tag", "cell-value").getOrThrow()
+            ]).flatMap(df => df.tagCell(1, 2, "cell-tag", "cell-value"))
+                .getOrThrow()
 
             // Verify the result is a DataFrame
-            expect(result).toBeDefined()
-            expect(result.rowCount()).toBe(3)
-            expect(result.columnCount()).toBe(3)
+            expect(taggedDataFrame).toBeDefined()
+            expect(taggedDataFrame.rowCount()).toBe(3)
+            expect(taggedDataFrame.columnCount()).toBe(3)
         })
 
         test("should return error when tagging cell with invalid row index", () => {
@@ -801,10 +796,12 @@ describe("Testing data-frame behavior", () => {
                     constructor(readonly name: string, readonly value: T, readonly coordinate: RowCoordinate) {
                         super(name, value, coordinate)
                     }
+
                     getCoordinate(): RowCoordinate {
                         return super.getCoordinate();
                     }
                 }
+
                 const tag = new MySpecialTag("special-tag", "special-value", RowCoordinate.of(0))
                 const cellValues = taggedDataFrame.cellsTaggedWith(tag)
                 expect(cellValues.failed).toBe(true)
@@ -905,7 +902,7 @@ describe("Testing data-frame behavior", () => {
             })
         })
 
-        describe("Determining whether parts of the data-frame are tags", () => {
+        describe("Determining whether parts of the data-frame are tagged", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],

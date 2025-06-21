@@ -982,6 +982,27 @@ export class DataFrame<V> {
      * @return A success result containing the updated DataFrame if the column index is valid,
      * or a failure result containing an error message if the column index is invalid.
      * @see mapColumnInPlace
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 4, 3],
+     *     [4, 10, 6],
+     *     [7, 16, 9],
+     *     [10, 22, 12]
+     * ]).getOrThrow()
+     *
+     * // multiply all the values in the second column by 2 and return a new data-frame,
+     * // leaving the original data-frame untouched
+     * const updated = dataFrame.mapColumn(1, (value: number) => value * 2).getOrThrow()
+     * expect(updated).toEqual(expected)
+     * expect(dataFrame).not.toEqual(expected)
+     * ```
      */
     public mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
@@ -1006,6 +1027,26 @@ export class DataFrame<V> {
      * @return A success result containing the updated DataFrame if the column index is valid,
      * or a failure result containing an error message if the column index is invalid.
      * @see mapColumn
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const expected = DataFrame.from([
+     *     [1, 4, 3],
+     *     [4, 10, 6],
+     *     [7, 16, 9],
+     *     [10, 22, 12]
+     * ]).getOrThrow()
+     *
+     * // multiply all the values in the second column by 2 in the original data-frame
+     * const updated = dataFrame.mapColumnInPlace(1, (value: number) => value * 2).getOrThrow()
+     * expect(updated).toEqual(expected)
+     * expect(dataFrame).toEqual(updated)
+     * ```
      */
     public mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
@@ -1028,6 +1069,23 @@ export class DataFrame<V> {
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the row index is valid,
      * or a failure result containing an error message if the row index is invalid.
+     * @example
+     * ```typescript
+     * const taggedDataFrame = DataFrame.from([
+     *       [1, 2, 3],
+     *       [4, 5, 6],
+     *       [7, 8, 9]
+     *   ])
+     *   .flatMap(df => df.tagRow(1, "row-tag", "row-value"))
+     *   .getOrThrow()
+     *
+     * // Verify the result is a DataFrame
+     * expect(taggedDataFrame).toBeDefined()
+     * expect(taggedDataFrame.rowCount()).toBe(3)
+     * expect(taggedDataFrame.columnCount()).toBe(3)
+     * expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()
+     * expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
+     * ```
      */
     public tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
@@ -1049,6 +1107,21 @@ export class DataFrame<V> {
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the column index is valid,
      * or a failure result containing an error message if the column index is invalid.
+     * @example
+     * ```typescript
+     * const taggedDataFrame = DataFrame.from([
+     *       [1, 2, 3],
+     *       [4, 5, 6],
+     *       [7, 8, 9]
+     *   ])
+     *   .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *   .getOrThrow()
+     *
+     * // Verify the result is a DataFrame
+     * expect(taggedDataFrame).toBeDefined()
+     * expect(taggedDataFrame.rowCount()).toBe(3)
+     * expect(taggedDataFrame.columnCount()).toBe(3)
+     * ```
      */
     public tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
@@ -1071,6 +1144,21 @@ export class DataFrame<V> {
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the indices are valid,
      * or a failure result containing an error message if either index is invalid.
+     * @example
+     * ```typescript
+     * const taggedDataFrame = DataFrame.from([
+     *       [1, 2, 3],
+     *       [4, 5, 6],
+     *       [7, 8, 9]
+     *   ])
+     *   .flatMap(df => df.tagCell(1, 2, "cell-tag", "cell-value"))
+     *   .getOrThrow()
+     *
+     * // Verify the result is a DataFrame
+     * expect(taggedDataFrame).toBeDefined()
+     * expect(taggedDataFrame.rowCount()).toBe(3)
+     * expect(taggedDataFrame.columnCount()).toBe(3)
+     * ```
      */
     public tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
@@ -1500,96 +1588,6 @@ export class DataFrame<V> {
     public hasTagFor(rowIndex: number, columnIndex: number): boolean {
         return this.tagsFor(rowIndex, columnIndex).length > 0
     }
-
-
-    public hasUniqueRowTagFor(name: string, rowIndex: number): boolean {
-        return this.tags.hasUniqueTagFor(name, RowCoordinate.of(rowIndex))
-    }
-
-    public hasUniqueColumnTagFor(name: string, columnIndex: number): boolean {
-        return this.tags.hasUniqueTagFor(name, ColumnCoordinate.of(columnIndex))
-    }
-
-    public hasCellUniqueTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
-        return this.tags.hasUniqueTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
-    }
-
-
-    public hasRowTagsWithName(name: string): boolean {
-        return this.tags.filter(tag => tag.name === name && isRowTag(tag)).length > 0
-    }
-
-    public hasColumnTagsWithName(name: string): boolean {
-        return this.tags.filter(tag => tag.name === name && isColumnTag(tag)).length > 0
-    }
-
-    public hasCellTagsWithName(name: string): boolean {
-        return this.tags.filter(tag => tag.name === name && isCellTag(tag)).length > 0
-    }
-
-    // /**
-    //  * Determines whether at least one tag has the specified name and coordinates.
-    //  * @param name The tag's name
-    //  * @param coordinate The tag's coordinate
-    //  * @return `true` if there is at least one tag that matches the specified name and coordinate.
-    //  * If there are no matches, then returns `false`.
-    //  */
-    // public hasTagCellFor(name: string, coordinate: CellCoordinate): boolean {
-    //     return this.tags.hasTagFor(name, coordinate)
-    // }
-    //
-    // /**
-    //  * Determines whether there is one and only one tag that has the specified name and coordinates.
-    //  * @param name The tag's name
-    //  * @param coordinate The tag's coordinate
-    //  * @return `true` if there is exactly one tag that matches the specified name and coordinate.
-    //  * If there are no matches, or more tha one match, then returns `false`.
-    //  */
-    // public hasUniqueTagFor(name: string, coordinate: C): boolean {
-    //     return this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate)).length === 1
-    // }
-    //
-    // /**
-    //  * Determines whether there exists a tag with the specified name
-    //  * @param name The tag's name
-    //  * @return `true` if there exists at least one tag with the specified name; `false` otherwise
-    //  */
-    // public hasTagWithName(name: string): boolean {
-    //     return this.tags.some(tag => tag.name === name)
-    // }
-    //
-    // /**
-    //  * Finds all the tags that have the specified coordinate and returns them.
-    //  * @param coordinate The coordinate on which to filter the tags
-    //  * @return An array of tags that match the specified coordinate
-    //  */
-    // public tagsForCoordinate(coordinate: C): Array<Tag<T, C>> {
-    //     return this.filter(tag => tag.coordinate.equals(coordinate))
-    // }
-    //
-    // /**
-    //  * Finds the unique tag with the specified name and coordinate.
-    //  * @param name The tag's name
-    //  * @param coordinate The tag's coordinate
-    //  * @return A Result containing the unique tag if exactly one is found, or an error message if none or multiple are found
-    //  */
-    // public uniqueTagFor(name: string, coordinate: C): Result<Tag<T, C>, string> {
-    //     const tags = this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate))
-    //     if (tags.length === 0) {
-    //         return failureResult(
-    //             `(Tags::uniqueTagFor) No tag with specified name and coordinate found; ` +
-    //             `name: ${name}; coordinate: ${coordinate.toString()}`
-    //         )
-    //     }
-    //     if (tags.length > 1) {
-    //         return failureResult(
-    //             `(Tags::uniqueTagFor) Multiple tags with specified name and coordinate found; ` +
-    //             `name: ${name}; coordinate: ${coordinate.toString()}`
-    //         )
-    //     }
-    //     return successResult(tags[0])
-    // }
-
 }
 
 type Bounds = { min: number, max: number }

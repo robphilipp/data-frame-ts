@@ -28,24 +28,38 @@ Key features:
 ```typescript
 import { DataFrame } from 'data-frame-ts';
 
-// Create a DataFrame from row data
-const df = DataFrame.from([
+// Create a DataFrame from row data and get back a [Result](https://github.com/robphilipp/result) holding the
+// data-frame when the data matrix is valid. For example, if not all 
+// the rows have the same number of elements, then the `Result` holds
+// a failure describing the issue.
+const result = DataFrame.from([
   [1, 2, 3],
   [4, 5, 6],
   [7, 8, 9]
-]).getOrThrow();
+])
 
-// Create a DataFrame from column data
-const dfFromColumns = DataFrame.fromColumnData([
+// You also create a `DataFrame` from column data and get back a result
+const result2 = DataFrame.fromColumnData([
   [1, 4, 7],  // first column
   [2, 5, 8],  // second column
   [3, 6, 9]   // third column
-]).getOrThrow();
+])
 ```
 
 ### Accessing Data
 
 ```typescript
+// After creating a `DataFrame` you can ask questions about it
+const result = DataFrame.from([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+])
+
+// grab the data-frame from the result. (Normally, you would use the `Result` class'
+// map method, but this is just and example.)
+const df = result.getOrThrow()
+
 // Get dimensions
 const rowCount = df.rowCount();  // 3
 const colCount = df.columnCount();  // 3
@@ -71,6 +85,9 @@ const allColumns = df.columnSlices();  // [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
 ```typescript
 // Set an element (returns a new DataFrame)
 const updatedDf = df.setElementAt(0, 0, 100).getOrThrow();
+
+// Set an element in-place (modifies the original DataFrame)
+const updatedInPlace = df.setElementInPlaceAt(0, 0, 100).getOrThrow();
 
 // Insert a row
 const dfWithNewRow = df.insertRowBefore(1, [10, 11, 12]).getOrThrow();
@@ -253,6 +270,7 @@ try {
 ### Data Modification Methods
 
 - `setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>` - Sets the value at the specified row and column
+- `setElementInPlaceAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>` - Sets the value at the specified row and column and modifies the original DataFrame
 - `insertRowBefore(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string>` - Inserts a row before the specified index
 - `pushRow(row: Array<V>): Result<DataFrame<V>, string>` - Adds a row at the end of the DataFrame
 - `insertColumnBefore(columnIndex: number, column: Array<V>): Result<DataFrame<V>, string>` - Inserts a column before the specified index

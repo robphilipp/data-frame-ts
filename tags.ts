@@ -552,7 +552,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @param name The tag's name
      * @param coordinate The tag's coordinate
      * @return `true` if there is exactly one tag that matches the specified name and coordinate.
-     * If there are no matches, or more tha one match, then returns `false`.
+     * If there are no matches, or more than one match, then returns `false`.
      */
     public hasUniqueTagFor(name: string, coordinate: C): boolean {
         return this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate)).length === 1
