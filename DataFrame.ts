@@ -13,6 +13,17 @@ import {
 } from "./tags";
 
 /**
+ * Convenience type that holds a value and its coordinates. This is useful
+ * when retrieving a set of values based on some query because it associates
+ * the value with its coordinates in the {@link DataFrame}
+ */
+export type CellValue<V> = {
+    value: V
+    row: number
+    column: number
+}
+
+/**
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
  * and querying of tabular data in a row-major format. The `DataFrame` is immutable for
  * immutable objects. Modifications to the rows, columns, or elements will not modify the
@@ -1120,41 +1131,74 @@ export class DataFrame<V> {
      * tagged with a matching tag are returned. And when the tag is a {@link CellTag}, then the
      * cell at that location is returned if it has a matching tag.
      * @param tag The {@link Tag} for which to find matching cells.
-     * @return An array of cells that are tagged with a tag that matches the specified tag
+     * @return An array of {@link CellValue} objects associated with the specified tag
+     * @example
+     * ```typescript
+     * // given a tagged data-frame
+     * const dataFrame = DataFrame.from([
+     *     [1, 2, 3],
+     *     [4, 5, 6],
+     *     [7, 8, 9],
+     *     [10, 11, 12]
+     * ]).getOrThrow()
+     * const taggedDataFrame = dataFrame
+     *     .tagRow(0, "row-tag", "row-value")
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+     *     .getOrThrow()
+     *
+     * // we can retrieve all the cells in a tagged row, in this case the
+     * // first row
+     * const tag = newRowTag("row-tag", "row-value", RowCoordinate.of(0))
+     * const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+     *
+     * // there are three values, and are the first row in the data-frame
+     * expect(cellValues).toHaveLength(3)
+     * expect(cellValues[0]).toEqual({"row": 0, "column": 0, "value": 1})
+     * expect(cellValues[1]).toEqual({"row": 0, "column": 1, "value": 2})
+     * expect(cellValues[2]).toEqual({"row": 0, "column": 2, "value": 3})
+     * ```
      */
-    public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<V>, string> {
+    public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string> {
         const [row, column] = tag.coordinate.coordinate()
         if (isRowTag(tag)) {
             if (this.rowTagsFor(row).some(tg => tg.equals(tag))) {
                 return this.rowSlice(row)
+                    .map(values => values
+                        .map((value, index) => ({value, row, column: index} as CellValue<V>))
+                    )
             }
-            return failureResult(`(DataFrame::cellsTaggedWith) No cells for specified tag found` +
-                `; row: ${row}; tag: ${tag.toString()}`
-            )
+            return successResult([])
         }
         if (isColumnTag(tag)) {
             if (this.columnTagsFor(column).some(tg => tg.equals(tag))) {
                 return this.columnSlice(column)
+                    .map(values => values
+                        .map((value, index) => ({value, row: index, column} as CellValue<V>))
+                    )
             }
-            return failureResult(`(DataFrame::cellsTaggedWith) No cells for specified tag found` +
-                `; column: ${row}; tag: ${tag.toString()}`
-            )
+            return successResult([])
         }
         if (isCellTag(tag)) {
             if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
                 return this.elementAt(row, column).map(value => [value])
+                    .map(values => values
+                        .map(value => ({value, row, column} as CellValue<V>))
+                    )
             }
-            return failureResult(
-                `(DataFrame::cellsTaggedWith) No cells for specified tag found` +
-                `; row: ${row}; column: ${column}; tag: ${tag.toString()}`
-            )
+            return successResult([])
         }
         return failureResult(
-            `(DataFrame::getCellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
+            `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
             `tag: ${tag.toString()}`
         )
     }
 
+    /**
+     * Retrieves all the {@link RowTag} objects associated with the specified row index
+     * @param rowIndex The index of the row to which the row tags apply
+     * @return An array of the {@link RowTag} objects associated with the specified row index
+     */
     public rowTagsFor(rowIndex: number): Array<Tag<TagValue, RowCoordinate>> {
         return this.tags.filter(tag => {
             const [row,] = tag.coordinate.coordinate()
@@ -1169,7 +1213,7 @@ export class DataFrame<V> {
         }) as Array<Tag<TagValue, ColumnCoordinate>>
     }
 
-    tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>> {
+    public tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>> {
         return this.tags.tagsFor(rowIndex, columnIndex)
     }
 

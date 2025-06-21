@@ -1,10 +1,17 @@
 import {failureResult, Result, successResult} from "result-fn";
 
 /**
- * Represents a coordinate in a data frame.
+ * Represents a coordinate in a data frame to which the tag applies.
  * A coordinate can be a row, column, or cell coordinate.
  */
 export interface TagCoordinate {
+    /**
+     * @return The coordinate of the tag as a named tuple. When
+     * one of the coordinates is not defined, for example, the column
+     * coordinate of a {@link RowCoordinate}, or the row coordinate
+     * of a {@link ColumnCoordinate}, then that coordinate value is
+     * `NaN`.
+     */
     coordinate: () => [row: number, column: number]
 
     /**
@@ -56,10 +63,22 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
         this.id = `tag-${name}-${coordinate.toString().replace(/ /g, "")}`
     }
 
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
     getCoordinate(): C {
         return this.coordinate
     }
 
+    /**
+     * Compares this {@link Tag} instance with another {@link Tag} instance for equality.
+     * Two {@link Tag} object are considered equal if their `name`, `value`, and `coordinate`
+     * are equal.
+     *
+     * @param other - The Tag instance to compare with.
+     * @return `true` if both {@link Tag} instances are equal, `false` otherwise.
+     */
     equals(other: Tag<V, C>): boolean {
         return this.name === other.name && this.value.toString() === other.value.toString() && this.coordinate.equals(other.coordinate)
     }
@@ -73,6 +92,12 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
     }
 }
 
+/**
+ * Defines the available {@link Tag} types that are available. This is used for determining the
+ * type of individual tags.
+ * <p>
+ * **Note** that when adding a new {@link Tag} type, add that tag type to this list
+ */
 export type AvailableTagTypes<V extends TagValue, C extends TagCoordinate> = RowTag<V> | ColumnTag<V> | CellTag<V> | Tag<V, C>
 
 /**
@@ -91,10 +116,18 @@ export class RowTag<T extends TagValue> extends Tag<T, RowCoordinate> {
         super(name, value, coordinate)
     }
 
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
     isRowTag(): this is RowTag<T> {
         return true
     }
 
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
     getCoordinate(): RowCoordinate {
         return super.getCoordinate();
     }
@@ -125,15 +158,28 @@ export class ColumnTag<T extends TagValue> extends Tag<T, ColumnCoordinate> {
         super(name, value, coordinate)
     }
 
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
     isColumnTag(): this is ColumnTag<T> {
         return true
     }
 
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
     getCoordinate(): ColumnCoordinate {
         return super.getCoordinate();
     }
 }
 
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link ColumnTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link ColumnTag}; `false` otherwise
+ */
 export function isColumnTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is ColumnTag<V> {
     return (tag as ColumnTag<V>).isColumnTag !== undefined
 }
@@ -155,19 +201,31 @@ export class CellTag<T extends TagValue> extends Tag<T, CellCoordinate> {
         super(name, value, coordinate)
     }
 
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
     isCellTag(): this is CellTag<T> {
         return true
     }
 
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
     getCoordinate(): CellCoordinate {
         return super.getCoordinate();
     }
 }
 
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link CellTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link CellTag}; `false` otherwise
+ */
 export function isCellTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is CellTag<V> {
     return (tag as CellTag<V>).isCellTag !== undefined
 }
-
 
 /**
  * Creates a new tag with the specified name, value, and coordinate.
@@ -444,6 +502,24 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
         )
     }
 
+    /**
+     * Returns an array of {@link Tag} objects that are associated with a coordinate
+     * @param rowIndex The row index
+     * @param columnIndex The column index
+     * @return An array of {@link Tag} objects that are associated with a coordinate
+     * @example
+     * ```typescript
+     * const tags = Tags.with<string>(
+     *     newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+     *     newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+     *     newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+     *     newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+     * )
+     * expect(tags.tagsFor(0, 4)).toHaveLength(2) // my-row-tag, my-cell-tag
+     * expect(tags.tagsFor(1, 4)).toHaveLength(1) // my-row-tag
+     * expect(tags.tagsFor(0, 0)).toHaveLength(2) // my-row-tag, my-column-tag
+     * ```
+     */
     public tagsFor(rowIndex: number, columnIndex: number): Array<Tag<T, C>> {
         return this.tags.filter(tag => {
             const [c1, c2] = tag.coordinate.coordinate() as [number, number]

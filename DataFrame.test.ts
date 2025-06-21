@@ -9,7 +9,7 @@ import {
     isRowTag, newCellTag, newColumnTag,
     newRowTag,
     RowCoordinate,
-    RowTag
+    RowTag, Tag, TagValue
 } from "./tags";
 
 describe("Testing data-frame behavior", () => {
@@ -132,11 +132,11 @@ describe("Testing data-frame behavior", () => {
 
         test("should retrieve element values when dimensions are valid (2, 2)", () => {
             const value = DataFrame.from([
-                    [1, 2, 3],
-                    [4, 5, 6],
-                    [7, 8, 9],
-                    [10, 11, 12]
-                ])
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ])
                 .flatMap(dataFrame => dataFrame.elementAt(2, 2))
                 .getOrThrow()
             expect(value).toEqual(9)
@@ -501,7 +501,7 @@ describe("Testing data-frame behavior", () => {
             const transposed = dataFrame.transpose()
             expect(transposed).toEqual(expected)
         })
-        
+
         test("should be able to apply a map to each element in the data-frame", () => {
             const data = [
                 [1, 2, 3],
@@ -738,6 +738,113 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.hasRowTagFor(0)).toBe(true)
         })
 
+        describe("Retrieving cells based on tags", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+
+            const taggedDataFrame = dataFrame
+                .tagRow(0, "row-tag", "row-value")
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+                .getOrThrow()
+
+            test("should be able to retrieve all cells for a specific row tag", () => {
+                const tag = newRowTag("row-tag", "row-value", RowCoordinate.of(0))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(3)
+                expect(cellValues[0]).toEqual({"row": 0, "column": 0, "value": 1})
+                expect(cellValues[1]).toEqual({"row": 0, "column": 1, "value": 2})
+                expect(cellValues[2]).toEqual({"row": 0, "column": 2, "value": 3})
+            })
+
+            test("should not retrieve cells for a row tag that doesn't match any tags", () => {
+                const tag = newRowTag("row-tag", "not-row-value", RowCoordinate.of(0))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(0)
+            })
+
+            test("should be able to retrieve all cells for a specific column tag", () => {
+                const tag = newColumnTag("column-tag", "column-value", ColumnCoordinate.of(1))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(4)
+                expect(cellValues[0]).toEqual({"row": 0, "column": 1, "value": 2})
+                expect(cellValues[1]).toEqual({"row": 1, "column": 1, "value": 5})
+                expect(cellValues[2]).toEqual({"row": 2, "column": 1, "value": 8})
+                expect(cellValues[3]).toEqual({"row": 3, "column": 1, "value": 11})
+            })
+
+            test("should not retrieve cells for a column tag that doesn't match any tags", () => {
+                const tag = newColumnTag("column-tag", "not-column-value", ColumnCoordinate.of(1))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(0)
+            })
+
+            test("should be able to retrieve all cells for a specific cell tag", () => {
+                const tag = newCellTag("cell-tag", "cell-value", CellCoordinate.of(2, 2))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(1)
+                expect(cellValues[0]).toEqual({"row": 2, "column": 2, "value": 9})
+            })
+
+            test("should not retrieve cells for a cell tag that doesn't match any tags", () => {
+                const tag = newCellTag("cell-tag", "not-cell-value", CellCoordinate.of(2, 2))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag).getOrThrow()
+                expect(cellValues).toHaveLength(0)
+            })
+
+            test("should fail if tag type is not an AvailableTagType object", () => {
+                class MySpecialTag<T extends TagValue> extends Tag<T, RowCoordinate> {
+                    constructor(readonly name: string, readonly value: T, readonly coordinate: RowCoordinate) {
+                        super(name, value, coordinate)
+                    }
+                    getCoordinate(): RowCoordinate {
+                        return super.getCoordinate();
+                    }
+                }
+                const tag = new MySpecialTag("special-tag", "special-value", RowCoordinate.of(0))
+                const cellValues = taggedDataFrame.cellsTaggedWith(tag)
+                expect(cellValues.failed).toBe(true)
+                expect(cellValues.error).toEqual("(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTagtag: special-tag:special-value:(0, *)")
+            })
+        })
+
+        describe("Retrieving cells based on tags", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+
+            const taggedDataFrame = dataFrame
+                .tagRow(0, "row-tag", "row-value")
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+                .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
+                .flatMap(df => df.tagRow(1, "row-tag-2", "row-value"))
+                .getOrThrow()
+
+            test("should be able to retrieve both row tags for the first row", () => {
+                const tags = taggedDataFrame.rowTagsFor(0)
+                expect(tags).toHaveLength(2)
+                expect(tags[0].name).toEqual("row-tag")
+                expect(tags[0].value).toEqual("row-value")
+                expect(tags[1].name).toEqual("row-tag-2")
+                expect(tags[1].value).toEqual("row-value")
+            })
+
+            test("should be able to retrieve the row tag for the second row", () => {
+                const tags = taggedDataFrame.rowTagsFor(1)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("row-tag-2")
+                expect(tags[0].value).toEqual("row-value")
+            })
+        })
+
         describe("Testing categorization functions", () => {
             const rowTag = newRowTag("row-tag", "row-value", RowCoordinate.of(3))
             const columnTag = newColumnTag("column-tag", "column-value", ColumnCoordinate.of(3))
@@ -748,7 +855,6 @@ describe("Testing data-frame behavior", () => {
                 expect(isRowTag(columnTag)).toBeFalsy()
                 expect(isRowTag(cellTag)).toBeFalsy()
             })
-
         })
 
         test("should be able to filter by tag", () => {

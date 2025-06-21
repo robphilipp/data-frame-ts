@@ -68,7 +68,7 @@ describe('tags', () => {
             newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
             newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
             newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
-            newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 0)),
+            newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
         )
 
         test('should be able to retrieve a tag by its ID', () => {
@@ -90,6 +90,12 @@ describe('tags', () => {
             const rowTags = tags.filter(tag => /[0-9]+$/.test(tag.name))
             expect(rowTags.length).toBe(1)
             expect(rowTags[0].name).toBe("my-row-tag-1")
+        })
+
+        test("should be able to retrieve all tags for a coordinate", () => {
+            expect(tags.tagsFor(0, 4)).toHaveLength(2) // my-row-tag, my-cell-tag
+            expect(tags.tagsFor(1, 4)).toHaveLength(1) // my-row-tag
+            expect(tags.tagsFor(0, 0)).toHaveLength(2) // my-row-tag, my-column-tag
         })
     })
 
