@@ -1,11 +1,11 @@
 import {failureResult, Result, successResult} from "result-fn";
 import {
-    CellCoordinate,
-    ColumnCoordinate, isCellTag, isColumnTag, isRowTag,
+    CellCoordinate, CellTag,
+    ColumnCoordinate, ColumnTag, isCellTag, isColumnTag, isRowTag,
     newCellTag,
     newColumnTag,
     newRowTag,
-    RowCoordinate,
+    RowCoordinate, RowTag,
     Tag,
     TagCoordinate,
     Tags,
@@ -1010,7 +1010,7 @@ export class DataFrame<V> {
 
     /**
      * Tags a specific row in the DataFrame with a name-value pair.
-     * 
+     *
      * @param rowIndex The index of the row to tag. Must be within the range [0, numRows).
      * @param name The name of the tag to associate with the row.
      * @param tag The value of the tag to associate with the row.
@@ -1031,7 +1031,7 @@ export class DataFrame<V> {
 
     /**
      * Tags a specific column in the DataFrame with a name-value pair.
-     * 
+     *
      * @param columnIndex The index of the column to tag. Must be within the range [0, numColumns).
      * @param name The name of the tag to associate with the column.
      * @param tag The value of the tag to associate with the column.
@@ -1052,7 +1052,7 @@ export class DataFrame<V> {
 
     /**
      * Tags a specific cell in the DataFrame with a name-value pair.
-     * 
+     *
      * @param rowIndex The index of the row containing the cell to tag. Must be within the range [0, numRows).
      * @param columnIndex The index of the column containing the cell to tag. Must be within the range [0, numColumns).
      * @param name The name of the tag to associate with the cell.
@@ -1113,67 +1113,103 @@ export class DataFrame<V> {
         return this.tags.filter(predicate)
     }
 
-    public hasRowTagFor(name: string, rowIndex: number): boolean {
-        return this.tags.hasTagFor(name, RowCoordinate.of(rowIndex))
+    /**
+     * Returns an Array of {@link Tag}s that are tagged with the specified tag. When the tag is a
+     * {@link RowTag} then all the cells in that row that are tagged with a matching row are
+     * returned. When the tag is a {@link ColumnTag} then all the cells in that column that are
+     * tagged with a matching tag are returned. And when the tag is a {@link CellTag}, then the
+     * cell at that location is returned if it has a matching tag.
+     * @param tag The {@link Tag} for which to find matching cells.
+     * @return An array of cells that are tagged with a tag that matches the specified tag
+     */
+    public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<V>, string> {
+        const [row, column] = tag.coordinate.coordinate()
+        if (isRowTag(tag)) {
+            if (this.rowTagsFor(row).some(tg => tg.equals(tag))) {
+                return this.rowSlice(row)
+            }
+            return failureResult(`(DataFrame::cellsTaggedWith) No cells for specified tag found` +
+                `; row: ${row}; tag: ${tag.toString()}`
+            )
+        }
+        if (isColumnTag(tag)) {
+            if (this.columnTagsFor(column).some(tg => tg.equals(tag))) {
+                return this.columnSlice(column)
+            }
+            return failureResult(`(DataFrame::cellsTaggedWith) No cells for specified tag found` +
+                `; column: ${row}; tag: ${tag.toString()}`
+            )
+        }
+        if (isCellTag(tag)) {
+            if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
+                return this.elementAt(row, column).map(value => [value])
+            }
+            return failureResult(
+                `(DataFrame::cellsTaggedWith) No cells for specified tag found` +
+                `; row: ${row}; column: ${column}; tag: ${tag.toString()}`
+            )
+        }
+        return failureResult(
+            `(DataFrame::getCellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
+            `tag: ${tag.toString()}`
+        )
     }
+
+    public rowTagsFor(rowIndex: number): Array<Tag<TagValue, RowCoordinate>> {
+        return this.tags.filter(tag => {
+            const [row,] = tag.coordinate.coordinate()
+            return isRowTag(tag) && row === rowIndex
+        }) as Array<Tag<TagValue, RowCoordinate>>
+    }
+
+    public columnTagsFor(columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>> {
+        return this.tags.filter(tag => {
+            const [, column] = tag.coordinate.coordinate()
+            return isColumnTag(tag) && column === columnIndex
+        }) as Array<Tag<TagValue, ColumnCoordinate>>
+    }
+
+    tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>> {
+        return this.tags.tagsFor(rowIndex, columnIndex)
+    }
+
+
+    public hasRowTagFor(rowIndex: number): boolean {
+        return this.rowTagsFor(rowIndex).length > 0
+    }
+
+    public hasColumnTagFor(columnIndex: number): boolean {
+        return this.columnTagsFor(columnIndex).length > 0
+    }
+
+    public hasTagFor(rowIndex: number, columnIndex: number): boolean {
+        return this.tagsFor(rowIndex, columnIndex).length > 0
+    }
+
 
     public hasUniqueRowTagFor(name: string, rowIndex: number): boolean {
         return this.tags.hasUniqueTagFor(name, RowCoordinate.of(rowIndex))
-    }
-
-    public hasRowTagsWithName(name: string): boolean {
-        return this.tags.filter(tag => tag.name === name && isRowTag(tag)).length > 0
-    }
-
-    public rowTagsFor(name: string, rowIndex: number): Array<Tag<TagValue, RowCoordinate>> {
-        return this.tags
-            .filter(tag => {
-                return isRowTag(tag) &&
-                    tag.name === name &&
-                    tag.coordinate === RowCoordinate.of(rowIndex)
-            }) as Array<Tag<TagValue, RowCoordinate>>
-    }
-
-    public hasColumnTagFor(name: string, columnIndex: number): boolean {
-        return this.tags.hasTagFor(name, ColumnCoordinate.of(columnIndex))
     }
 
     public hasUniqueColumnTagFor(name: string, columnIndex: number): boolean {
         return this.tags.hasUniqueTagFor(name, ColumnCoordinate.of(columnIndex))
     }
 
+    public hasCellUniqueTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
+        return this.tags.hasUniqueTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
+    }
+
+
+    public hasRowTagsWithName(name: string): boolean {
+        return this.tags.filter(tag => tag.name === name && isRowTag(tag)).length > 0
+    }
+
     public hasColumnTagsWithName(name: string): boolean {
         return this.tags.filter(tag => tag.name === name && isColumnTag(tag)).length > 0
     }
 
-    public columnTagsFor(name: string, columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>> {
-        return this.tags
-            .filter(tag => {
-                return isColumnTag(tag) &&
-                    tag.name === name &&
-                    tag.coordinate === ColumnCoordinate.of(columnIndex)
-            }) as Array<Tag<TagValue, ColumnCoordinate>>
-    }
-
-    public hasCellTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
-        return this.tags.hasTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
-    }
-
-    public hasUniqueCellTagFor(name: string, rowIndex: number, columnIndex: number): boolean {
-        return this.tags.hasUniqueTagFor(name, CellCoordinate.of(rowIndex, columnIndex))
-    }
-
     public hasCellTagsWithName(name: string): boolean {
         return this.tags.filter(tag => tag.name === name && isCellTag(tag)).length > 0
-    }
-
-    public cellTagsFor(name: string, row: number, column: number): Array<Tag<TagValue, CellCoordinate>> {
-        return this.tags
-            .filter(tag => {
-                return isCellTag(tag) &&
-                    tag.name === name &&
-                    tag.coordinate === CellCoordinate.of(row, column)
-            }) as Array<Tag<TagValue, CellCoordinate>>
     }
 
     // /**

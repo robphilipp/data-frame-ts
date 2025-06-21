@@ -630,9 +630,8 @@ describe("Testing data-frame behavior", () => {
             expect(result).toBeDefined()
             expect(result.rowCount()).toBe(3)
             expect(result.columnCount()).toBe(3)
-            expect(result.hasRowTagFor("row-tag", 1)).toBeTruthy()
-            expect(result.hasRowTagFor("row-tag", 2)).toBeFalsy()
-            expect(result.hasRowTagFor("not-a-row-tag", 2)).toBeFalsy()
+            expect(result.hasRowTagFor(1)).toBeTruthy()
+            expect(result.hasRowTagFor(2)).toBeFalsy()
         })
 
         test("should return error when tagging row with invalid index", () => {
@@ -734,9 +733,9 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame).toBeDefined()
             expect(taggedDataFrame.rowCount()).toBe(3)
             expect(taggedDataFrame.columnCount()).toBe(3)
-            expect(taggedDataFrame.hasCellTagFor("cell-tag", 2, 2)).toBe(true)
-            expect(taggedDataFrame.hasColumnTagFor("column-tag", 1)).toBe(true)
-            expect(taggedDataFrame.hasRowTagFor("row-tag", 0)).toBe(true)
+            expect(taggedDataFrame.hasTagFor(2, 2)).toBe(true)
+            expect(taggedDataFrame.hasColumnTagFor(1)).toBe(true)
+            expect(taggedDataFrame.hasRowTagFor(0)).toBe(true)
         })
 
         describe("Testing categorization functions", () => {

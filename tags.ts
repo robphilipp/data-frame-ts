@@ -5,6 +5,8 @@ import {failureResult, Result, successResult} from "result-fn";
  * A coordinate can be a row, column, or cell coordinate.
  */
 export interface TagCoordinate {
+    coordinate: () => [row: number, column: number]
+
     /**
      * Determines whether this coordinate equals another coordinate.
      * @param other The other coordinate to compare with
@@ -56,6 +58,10 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
 
     getCoordinate(): C {
         return this.coordinate
+    }
+
+    equals(other: Tag<V, C>): boolean {
+        return this.name === other.name && this.value.toString() === other.value.toString() && this.coordinate.equals(other.coordinate)
     }
 
     /**
@@ -273,8 +279,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @return A copy of this {@link Tags} object.
      */
     private copy(): Tags<T, C> {
-        const tags: Array<Tag<T, C>> = this.tags.slice()
-        return new Tags<T, C>(tags)
+        return new Tags<T, C>(this.tags.slice())
     }
 
     /**
@@ -439,6 +444,22 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
         )
     }
 
+    public tagsFor(rowIndex: number, columnIndex: number): Array<Tag<T, C>> {
+        return this.tags.filter(tag => {
+            const [c1, c2] = tag.coordinate.coordinate() as [number, number]
+            if (tag.coordinate instanceof RowCoordinate && isNaN(c2)) {
+                return c1 === rowIndex
+            }
+            if (tag.coordinate instanceof ColumnCoordinate && isNaN(c1)) {
+                return c2 === columnIndex
+            }
+            if (tag.coordinate instanceof CellCoordinate) {
+                return c1 === rowIndex && c2 === columnIndex
+            }
+            return false
+        })
+    }
+
     /**
      * Determines whether at least one tag has the specified name and coordinates.
      * @param name The tag's name
@@ -514,6 +535,10 @@ export class RowCoordinate implements TagCoordinate {
     private constructor(private readonly row: number) {
     }
 
+    coordinate(): [row: number, column: number] {
+        return [this.row, NaN]
+    }
+
     /**
      * Creates a new RowCoordinate with the specified row index.
      * @param row The row index
@@ -549,6 +574,10 @@ export class RowCoordinate implements TagCoordinate {
  */
 export class ColumnCoordinate implements TagCoordinate {
     private constructor(private readonly column: number) {
+    }
+
+    coordinate(): [row: number, column: number] {
+        return [NaN, this.column]
     }
 
     /**
@@ -587,6 +616,10 @@ export class ColumnCoordinate implements TagCoordinate {
 export class CellCoordinate implements TagCoordinate {
 
     private constructor(private readonly row: number, private readonly column: number) {
+    }
+
+    coordinate(): [row: number, column: number] {
+        return [this.row, this.column]
     }
 
     /**
