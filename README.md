@@ -27,13 +27,17 @@ A lightweight, immutable, two-dimensional data structure for TypeScript that all
 - [Contributing](#contributing)
 - [License](#license)
 
-## Installation [↑](#table-of-contents)
+## Installation
+
+[(toc)](#table-of-contents)
 
 ```bash
 npm install data-frame-ts
 ```
 
-## Overview [↑](#table-of-contents)
+## Overview
+
+[(toc)](#table-of-contents)
 
 `DataFrame` is a two-dimensional data structure that stores data in a row-major format. It is designed to be immutable for immutable objects, meaning that modifications to the rows, columns, or elements will not modify the original `DataFrame`, but rather return a modified copy.
 
@@ -44,9 +48,13 @@ Key features:
 - Tag rows, columns, and cells with metadata
 - Immutable operations that return new DataFrames
 
-## Basic Usage [↑](#table-of-contents)
+## Basic Usage
 
-### Creating a DataFrame [↑](#table-of-contents)
+[(toc)](#table-of-contents)
+
+### Creating a DataFrame
+
+[(toc)](#table-of-contents)
 
 The `DataFrame` class provides two factory functions for creating a `DataFrame` object. Both of these factory methods are `static` (and remain part of the class for namespacing). The constructor is `private` and cannot be accessed directly.
 1. `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>`
@@ -77,7 +85,9 @@ const result2 = DataFrame.fromColumnData([
 
 The first function, `from(...)` accepts an array of rows, where each row is represented by an array of values of type `V`. The second function, `fromColumnData(...)` accepts an array of columns, where each column is represented by an array of values of type, you guessed it, `V`. In both cases, the `DataFrame` converts the data to its internal representation, and all methods behave identically, regardless of the factory function used to instantiate the `DataFrame` object.
 
-### Accessing Data [↑](#table-of-contents)
+### Accessing Data
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // After creating a `DataFrame` you can ask questions about it.
@@ -112,7 +122,9 @@ const allRows = dataFrom.rowSlices();  // [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 const allColumns = dataFrom.columnSlices();  // [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
 ```
 
-### Modifying Data [↑](#table-of-contents)
+### Modifying Data
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // Set an element (returns a new DataFrame)
@@ -140,7 +152,9 @@ const dfWithoutRow = df.deleteRowAt(1).getOrThrow();
 const dfWithoutColumn = df.deleteColumnAt(1).getOrThrow();
 ```
 
-### Transforming Data [↑](#table-of-contents)
+### Transforming Data
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // Transpose the DataFrame
@@ -162,13 +176,19 @@ const mappedRowInPlace = df.mapRowInPlace(1, value => value * 2).getOrThrow();
 const mappedColumnInPlace = df.mapColumnInPlace(1, value => value * 2).getOrThrow();
 ```
 
-## Advanced Features [↑](#table-of-contents)
+## Advanced Features
 
-### Tagging [↑](#table-of-contents)
+[(toc)](#table-of-contents)
+
+### Tagging
+
+[(toc)](#table-of-contents)
 
 The DataFrame supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the DataFrame (row, column, or cell).
 
-#### Adding Tags [↑](#table-of-contents)
+#### Adding Tags
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // Tag a row
@@ -190,7 +210,9 @@ const taggedDf = df
     .getOrThrow();
 ```
 
-#### Retrieving Tags [↑](#table-of-contents)
+#### Retrieving Tags
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // Create a tagged DataFrame
@@ -228,7 +250,9 @@ const hasNoRowTag = taggedDataFrame.hasRowTagFor(2);  // false
 
 Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows for flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
 
-#### Advanced Tag Operations [↑](#table-of-contents)
+#### Advanced Tag Operations
+
+[(toc)](#table-of-contents)
 
 ```typescript
 // Filter tags based on a predicate
@@ -250,7 +274,9 @@ const hasCellTag = taggedDataFrame.hasCellTagFor(2, 2);  // true if cell at (2,2
 const hasAnyTag = taggedDataFrame.hasTagFor(1, 1);  // true if position (1,1) has any tags
 ```
 
-### Error Handling [↑](#table-of-contents)
+### Error Handling
+
+[(toc)](#table-of-contents)
 
 The library uses a `Result` type from the `result-fn` package for error handling:
 
@@ -280,14 +306,20 @@ try {
 }
 ```
 
-## API Reference [↑](#table-of-contents)
+## API Reference
 
-### DataFrame Creation Methods [↑](#table-of-contents)
+[(toc)](#table-of-contents)
+
+### DataFrame Creation Methods
+
+[(toc)](#table-of-contents)
 
 - `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>` - Creates a DataFrame from a 2D array of data
 - `DataFrame.fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string>` - Creates a DataFrame from column-oriented data
 
-### Data Access Methods [↑](#table-of-contents)
+### Data Access Methods
+
+[(toc)](#table-of-contents)
 
 - `rowCount(): number` - Returns the number of rows in the DataFrame
 - `columnCount(): number` - Returns the number of columns in the DataFrame
@@ -299,7 +331,9 @@ try {
 - `copy(): DataFrame<V>` - Creates a copy of the DataFrame
 - `equals(other: DataFrame<V>): boolean` - Checks if this DataFrame equals another DataFrame
 
-### Data Modification Methods [↑](#table-of-contents)
+### Data Modification Methods
+
+[(toc)](#table-of-contents)
 
 - `setElementAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>` - Sets the value at the specified row and column
 - `setElementInPlaceAt(rowIndex: number, columnIndex: number, value: V): Result<DataFrame<V>, string>` - Sets the value at the specified row and column and modifies the original DataFrame
@@ -310,7 +344,9 @@ try {
 - `deleteRowAt(rowIndex: number): Result<DataFrame<V>, string>` - Deletes the row at the specified index
 - `deleteColumnAt(columnIndex: number): Result<DataFrame<V>, string>` - Deletes the column at the specified index
 
-### Data Transformation Methods [↑](#table-of-contents)
+### Data Transformation Methods
+
+[(toc)](#table-of-contents)
 
 - `transpose(): DataFrame<V>` - Transposes the DataFrame (rows become columns and columns become rows)
 - `mapElements<U>(mapper: (value: V, rowIndex: number, columnIndex: number) => U): DataFrame<U>` - Applies a function to each element in the DataFrame and returns a new DataFrame
@@ -319,7 +355,9 @@ try {
 - `mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and returns a new DataFrame
 - `mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and modifies the original DataFrame
 
-### Tagging Methods [↑](#table-of-contents)
+### Tagging Methods
+
+[(toc)](#table-of-contents)
 
 - `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
 - `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
@@ -354,10 +392,14 @@ The `Tags` class provides methods for managing collections of tags:
 - `addOrReplace(name, value, coordinate)` - Adds a new tag or replaces an existing one
 - `remove(id)` - Removes a tag by ID
 
-## Contributing [↑](#table-of-contents)
+## Contributing
+
+[(toc)](#table-of-contents)
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License [↑](#table-of-contents)
+## License
+
+[(toc)](#table-of-contents)
 
 This project is licensed under the MIT License - see the LICENSE file for details.
