@@ -198,13 +198,6 @@ describe("Testing data-frame behavior", () => {
             }
             expect(slice).toEqual([70, 80, 90])
             expect(dataFrame.rowSlice(2).getOrThrow()).toEqual([7, 8, 9])
-            // const result = DataFrame.from([
-            //     [1, 2, 3],
-            //     [4, 5, 6],
-            //     [7, 8, 9],
-            //     [10, 11, 12]
-            // ])
-            // expect(result.flatMap((df: DataFrame<number>) => df.rowSlice(2)).getOrThrow()).toEqual([7, 8, 9])
         })
 
         test("should not retrieve row if the row index is out of bounds", () => {
@@ -539,6 +532,26 @@ describe("Testing data-frame behavior", () => {
                 .mapElements<string>((value, row, column) => (`${value * row + column}`))
             expect(updated).toEqual(expected)
             expect(dataFrame).toEqual(DataFrame.from(data).getOrThrow())
+        })
+
+        test("example of chaining", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 7, 12]
+            ]
+            const filteredDataFrame = DataFrame
+                .from(data)
+                .flatMap(dataFrame => dataFrame.elementAt(2, 0).map(value => ({dataFrame, value})))
+                .map(pair => pair.dataFrame.rowSlices().filter(row => row.some(value => value === pair.value)))
+                .flatMap(rows => DataFrame.from(rows))
+                .getOrThrow()
+            const expectedDataFrame = DataFrame.from([
+                [7, 8, 9],
+                [10, 7, 12]
+            ]).getOrThrow()
+            expect(filteredDataFrame).toEqual(expectedDataFrame)
         })
     })
 

@@ -89,6 +89,10 @@ The first function, `from(...)` accepts an array of rows, where each row is repr
 
 [(toc)](#table-of-contents)
 
+Once you've created a `DataFrame`, you may want to ask questions about the data that it holds. 
+
+> These are examples, and so the usage of the `Result` class isn't idiomatic. Please see [Result documentation](https://github.com/robphilipp/result/blob/main/README.md) for how to use the `Result` class correctly. 
+
 ```typescript
 // After creating a `DataFrame` you can ask questions about it.
 // Here, we grab the data-frame directly from the result. (Normally, 
@@ -105,8 +109,7 @@ const dataFrom = DataFrame.from([
 const rowCount = dataFrom.rowCount();  // 3
 const colCount = dataFrom.columnCount();  // 3
 
-// Access an element (and grab the element directly from the
-// `Result`.
+// Access an element
 const element = dataFrom.elementAt(1, 2).getOrThrow();  // 6
 
 // Get a row
@@ -122,9 +125,47 @@ const allRows = dataFrom.rowSlices();  // [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 const allColumns = dataFrom.columnSlices();  // [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
 ```
 
+As another example, let's find all the rows in a data-frame that contain the same value as a some chosen element. Then let's create a new data-frame containing only those rows.
+
+```typescript
+// the data contains two rows that contain the value 7. 
+const data = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9],
+  [10, 7, 12]
+]
+
+// create a new data-frame with only the rows that contain the value found at (row, column) = (2, 0), or
+// the value of 7.
+const filteredDataFrame = DataFrame
+        // create a data-frame from the data
+        .from(data)
+        // grab the value of the element at (2, 0), and then return a tuple with the original
+        // data-frame and the value.
+        .flatMap(dataFrame => dataFrame.elementAt(2, 0).map(value => ({dataFrame, value})))
+        // run through all the rows of the data-frame, filtering out all the rows that do NOT
+        // contain a value of 7
+        .map(pair => pair.dataFrame.rowSlices().filter(row => row.some(value => value === pair.value)))
+        // create a new data-frame from those filtered rows
+        .flatMap(rows => DataFrame.from(rows))
+        // unwrap the filtered data-frame (though in you code, this could go on... :)
+        .getOrThrow()
+
+// the expected data-frame has only the last two rows of the original data-frame
+const expectedDataFrame = DataFrame.from([
+  [7, 8, 9],
+  [10, 7, 12]
+]).getOrThrow()
+
+expect(filteredDataFrame).toEqual(expectedDataFrame)
+```
+
 ### Modifying Data
 
 [(toc)](#table-of-contents)
+
+Now that we can create data-frames, and get basic information from them, we may also want to transform or update the data-frame. The idiomatic way of updating or transforming a data-frame leaves the original data-frame unmodified, and returns a copy of the original data-frame with the updated values. When performance is an issue, there are also methods for updating and transforming the data-frame in-place.
 
 ```typescript
 // Set an element (returns a new DataFrame)
