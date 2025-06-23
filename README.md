@@ -168,29 +168,46 @@ expect(filteredDataFrame).toEqual(expectedDataFrame)
 Now that we can create data-frames, and get basic information from them, we may also want to transform or update the data-frame. The idiomatic way of updating or transforming a data-frame leaves the original data-frame unmodified, and returns a copy of the original data-frame with the updated values. When performance is an issue, there are also methods for updating and transforming the data-frame in-place.
 
 ```typescript
-// Set an element (returns a new DataFrame)
-const updatedDf = df.setElementAt(0, 0, 100).getOrThrow();
+// Create a data-frame
+const dataFrame = DataFrame.from([
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9]
+]).getOrThrow()
 
-// Set an element in-place (modifies the original DataFrame)
-const updatedInPlace = df.setElementInPlaceAt(0, 0, 100).getOrThrow();
+//
+// The following examples returns a `Result` because, for example, 
+// the rowIndex and/or the columnIndex could be out of bounds.
+//
 
-// Insert a row
-const dfWithNewRow = df.insertRowBefore(1, [10, 11, 12]).getOrThrow();
+// Set the value of element (0, 0) (returns a new DataFrame).
+const updatedDf = dataFrame.setElementAt(0, 0, 100).getOrThrow();
 
-// Add a row at the end
-const dfWithAddedRow = df.pushRow([10, 11, 12]).getOrThrow();
+// Set an element in-place (modifies the original DataFrame). In this case,
+// `dataFrame` and `updatedInPlace` are the same data-frame. Only use this
+// method when performance matters.
+const updatedInPlace = dataFrame.setElementInPlaceAt(0, 0, 100).getOrThrow();
+
+// Insert a row before the second row in the `dataFrame`. Returns a `Result` 
+// because the specified row length may not equal the row lengths in the 
+// data-frame, and the row-index may be out of bounds. 
+const dfWithNewRow = dataFrame.insertRowBefore(1, [10, 11, 12]).getOrThrow();
+
+// Add a row after the last row. Returns a `Result` because the specified 
+// row length may not equal the row lengths in the data-frame.
+const dfWithAddedRow = dataFrame.pushRow([10, 11, 12]).getOrThrow();
 
 // Insert a column
-const dfWithNewColumn = df.insertColumnBefore(1, [10, 11, 12]).getOrThrow();
+const dfWithNewColumn = dataFrame.insertColumnBefore(1, [10, 11, 12]).getOrThrow();
 
 // Add a column at the end
-const dfWithAddedColumn = df.pushColumn([10, 11, 12]).getOrThrow();
+const dfWithAddedColumn = dataFrame.pushColumn([10, 11, 12]).getOrThrow();
 
 // Delete a row
-const dfWithoutRow = df.deleteRowAt(1).getOrThrow();
+const dfWithoutRow = dataFrame.deleteRowAt(1).getOrThrow();
 
 // Delete a column
-const dfWithoutColumn = df.deleteColumnAt(1).getOrThrow();
+const dfWithoutColumn = dataFrame.deleteColumnAt(1).getOrThrow();
 ```
 
 ### Transforming Data
