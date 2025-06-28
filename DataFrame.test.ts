@@ -736,6 +736,82 @@ describe("Testing data-frame behavior", () => {
             expect(dataFrame.hasCellTagFor(3, 2)).toBeFalsy()
         })
 
+        test("should update tags when data-frame is sub-framed", () => {
+            const dataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                .flatMap(df => df.subFrame(indexFrom(1, 1), indexFrom(2, 2)))
+                .getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(dataFrame).toBeDefined()
+            expect(dataFrame.rowCount()).toBe(2)
+            expect(dataFrame.columnCount()).toBe(2)
+
+            expect(dataFrame.hasColumnTagFor(0)).toBeTruthy()
+            expect(dataFrame.hasRowTagFor(0)).toBeFalsy()
+            expect(dataFrame.hasCellTagFor(3, 2)).toBeFalsy()
+            expect(dataFrame.hasCellTagFor(2, 1)).toBeFalsy()
+        })
+
+        test("should update tags when data-frame has a row removed", () => {
+            const dataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                .flatMap(df => df.deleteRowAt(3))
+                .getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(dataFrame).toBeDefined()
+            expect(dataFrame.rowCount()).toBe(3)
+            expect(dataFrame.columnCount()).toBe(3)
+
+            expect(dataFrame.hasColumnTagFor(1)).toBeTruthy()
+            expect(dataFrame.hasRowTagFor(0)).toBeTruthy()
+            expect(dataFrame.hasCellTagFor(3, 2)).toBeFalsy()
+            expect(dataFrame.hasCellTagFor(2, 1)).toBeFalsy()
+        })
+
+        test("should update tags when data-frame has a column removed", () => {
+            const dataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                .flatMap(df => df.deleteColumnAt(1))
+                .getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(dataFrame).toBeDefined()
+            expect(dataFrame.rowCount()).toBe(4)
+            expect(dataFrame.columnCount()).toBe(2)
+
+            expect(dataFrame.hasColumnTagFor(0)).toBeFalsy()
+            expect(dataFrame.hasColumnTagFor(1)).toBeFalsy()
+            expect(dataFrame.hasRowTagFor(0)).toBeTruthy()
+            expect(dataFrame.hasCellTagFor(3, 1)).toBeTruthy()
+            expect(dataFrame.hasCellTagFor(3, 2)).toBeFalsy()
+        })
+
         test("should return error when tagging row with invalid index", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
