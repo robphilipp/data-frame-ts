@@ -24,6 +24,18 @@ export type CellValue<V> = {
 }
 
 /**
+ * Represents an index in the data-frame
+ */
+export type Index = {
+    row: number
+    column: number
+}
+
+export function indexFrom(row: number, column: number): Index {
+    return {row, column}
+}
+
+/**
  * Represents a two-dimensional data structure, `DataFrame`, that allows for manipulation
  * and querying of tabular data in a row-major format. The `DataFrame` is immutable for
  * immutable objects. Modifications to the rows, columns, or elements will not modify the
@@ -393,6 +405,46 @@ export class DataFrame<V> {
             columnSlices.push(this.columnSlice(i).getOrThrow())
         }
         return columnSlices
+    }
+
+    /**
+     * Returns a `Result` holding a `DataFrame` that is a subset of the original `DataFrame`
+     * @param start The start (row, column) index of the selection range
+     * @param end The ending (row, column) index of the selection range
+     * @return a `Result` holding a `DataFrame` that is a subset of the original `DataFrame` if the
+     * range is valid; otherwise a failure explaining the issue.
+     * @example
+     * ```typescript
+     * // sub-frame will be
+     * // [[5, 6],
+     * //  [8, 9]]
+     * const subFrame: DataFrame<number> = DataFrame
+     *     .from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12],
+     *     ])
+     *     .flatMap(df => df.subFrame(indexFrom(1, 1), indexFrom(2, 2)))
+     *     .getOrThrow()
+     * ```
+     */
+    public subFrame(start: Index, end: Index): Result<DataFrame<V>, string> {
+        if (start.row < 0 || start.row >= this.numRows || end.row < 0 || end.row >= this.numRows ||
+            start.column < 0 || start.column >= this.numColumns || end.column < 0 || end.column >= this.numColumns) {
+            return failureResult(
+                `(DataFrame::subFrame) Range out of bounds; ` +
+                `start_index: (${start.row}, ${start.column}); end_index: (${end.row}, ${end.column}); ` +
+                `valid_range: [[0, ${this.numRows}), [0, ${this.numColumns})]`
+            )
+        }
+        const data: Array<V> = []
+        for (let row = start.row; row <= end.row; row++) {
+            for (let column = start.column; column <= end.column; column++) {
+                data.push(this.data[row * this.numColumns + column])
+            }
+        }
+        return successResult(new DataFrame(data, end.row - start.row + 1, end.column - start.column + 1))
     }
 
     /**
@@ -1328,6 +1380,7 @@ export class DataFrame<V> {
         //     `tag: ${tag.toString()}`
         // )
     }
+
     // public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string> {
     //     const [row, column] = tag.coordinate.coordinate()
     //     if (isRowTag(tag)) {

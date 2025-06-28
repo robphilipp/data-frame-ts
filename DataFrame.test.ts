@@ -1,4 +1,4 @@
-import {DataFrame} from "./DataFrame";
+import {DataFrame, indexFrom} from "./DataFrame";
 import {
     CellCoordinate,
     CellTag,
@@ -261,6 +261,36 @@ describe("Testing data-frame behavior", () => {
             expect(rowSlices[1]).toEqual([4, 5, 6])
             expect(rowSlices[2]).toEqual([7, 8, 9])
             expect(rowSlices[3]).toEqual([10, 11, 12])
+        })
+
+        test("should be able to retrieve a subset of the data-frame", () => {
+            const subFrame: DataFrame<number> = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.subFrame(indexFrom(1, 1), indexFrom(2, 2)))
+                .getOrThrow()
+            const expected = DataFrame.from([
+                [5, 6],
+                [8, 9]
+            ]).getOrThrow()
+            expect(subFrame.equals(expected)).toBeTruthy()
+        })
+
+        test("should fail to create subframe when the indexes are out of bounds", () => {
+            const result = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.subFrame(indexFrom(1, 1), indexFrom(4, 2)))
+            expect(result.failed).toBeTruthy()
+            expect(result.error).toEqual("(DataFrame::subFrame) Range out of bounds; start_index: (1, 1); end_index: (4, 2); valid_range: [[0, 4), [0, 3)]")
         })
 
         test("copy should equal itself", () => {
