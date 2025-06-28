@@ -1,6 +1,6 @@
 {
   "name": "data-frame-ts",
-  "version": "0.2.1-snapshot",
+  "version": "0.3.0",
   "description": "typescript DataFrame",
   "author": "Rob Philipp",
   "homepage": "https://github.com/robphilipp/data-frame-ts",

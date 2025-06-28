@@ -1,5 +1,10 @@
 # changelog
 
+## 0.3.0
+
+1. Fixed bug where the tags were getting out of sync when a row or column was removed.
+2. Added method to retrieve a sub-frame from the data-frame
+
 ## 0.2.0
 
 Added method to retrieve sub-frames from data-frame
