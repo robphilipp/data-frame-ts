@@ -287,7 +287,7 @@ const dataFrame = DataFrame
         // tranpose the data-frame
         .map(dataFrame => dataFrame.transpose())
         .getOrThrow()
-        
+
 // the values in the `dataFrame` are now        
 // [[7, 10],
 // [8, 7 + 1],
@@ -491,11 +491,13 @@ const dataFrame = DataFrame
 
 - `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>` - Creates a DataFrame from a 2D array of data
 - `DataFrame.fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string>` - Creates a DataFrame from column-oriented data
+- `DataFrame.empty<V>(): Result<DataFrame<V>, string>` - Creates an empty DataFrame
 
 ### Data Access Methods
 
 [(toc)](#table-of-contents)
 
+- `isEmpty(): boolean` - Returns true if the DataFrame is empty, false otherwise
 - `rowCount(): number` - Returns the number of rows in the DataFrame
 - `columnCount(): number` - Returns the number of columns in the DataFrame
 - `elementAt(rowIndex: number, columnIndex: number): Result<V, string>` - Returns the element at the specified row and column
@@ -545,12 +547,6 @@ const dataFrame = DataFrame
 - `hasColumnTagFor(columnIndex: number): boolean` - Reports whether the column with the specified index has any column tags
 - `hasCellTagFor(rowIndex: number, columnIndex: number): boolean` - Reports whether the cell with the specified (row, column) index has any cell tags
 - `hasTagFor(rowIndex: number, columnIndex: number): boolean` - Reports whether the cell with the specified (row, column) index has any tags (row, column, or cell)
-- `hasUniqueRowTagFor(name: string, rowIndex: number): boolean` - Reports whether there is exactly one row tag with the specified name for the specified row
-- `hasUniqueColumnTagFor(name: string, columnIndex: number): boolean` - Reports whether there is exactly one column tag with the specified name for the specified column
-- `hasCellUniqueTagFor(name: string, rowIndex: number, columnIndex: number): boolean` - Reports whether there is exactly one cell tag with the specified name for the specified cell
-- `hasRowTagsWithName(name: string): boolean` - Reports whether there are any row tags with the specified name
-- `hasColumnTagsWithName(name: string): boolean` - Reports whether there are any column tags with the specified name
-- `hasCellTagsWithName(name: string): boolean` - Reports whether there are any cell tags with the specified name
 - `filterTags(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, TagCoordinate>>` - Returns an array of tags that meet the criteria specified in the predicate
 - `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` - Returns an array of cell values that are tagged with the specified tag
 
