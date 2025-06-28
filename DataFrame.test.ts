@@ -553,6 +553,29 @@ describe("Testing data-frame behavior", () => {
             ]).getOrThrow()
             expect(filteredDataFrame).toEqual(expectedDataFrame)
         })
+
+        test("another example of chaining", () => {
+            const data = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 7, 12]
+            ]
+            const filteredDataFrame = DataFrame
+                .from(data)
+                .flatMap(dataFrame => dataFrame.elementAt(2, 0).map(value => ({dataFrame, value})))
+                .map(pair => pair.dataFrame.rowSlices().filter(row => row.some(value => value === pair.value)))
+                .flatMap(rows => DataFrame.from(rows))
+                .map(dataFrame => dataFrame.mapElements((value, rowIndex, columnIndex) => value + rowIndex * columnIndex))
+                .map(dataFrame => dataFrame.transpose())
+                .getOrThrow()
+            const expectedDataFrame = DataFrame.from([
+                [7, 10],
+                [8, 7 + 1],
+                [9, 12 + 2]
+            ]).getOrThrow()
+            expect(filteredDataFrame).toEqual(expectedDataFrame)
+        })
     })
 
     describe("Row and column functions", () => {

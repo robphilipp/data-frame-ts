@@ -177,21 +177,12 @@ const dataFrame = DataFrame.from([
 
 //
 // The following examples returns a `Result` because, for example, 
-// the rowIndex and/or the columnIndex could be out of bounds.
+// the rowIndex and/or the columnIndex could be out of bounds. 
+// Notice that the original `dataFrame` is not modified. 
 //
 
 // Set the value of element (0, 0) (returns a new DataFrame).
 const updatedDf = dataFrame.setElementAt(0, 0, 100).getOrThrow();
-
-// Set an element in-place (modifies the original DataFrame). In this case,
-// `dataFrame` and `updatedInPlace` are the same data-frame. Only use this
-// method when performance matters.
-const updatedInPlace = dataFrame.setElementInPlaceAt(0, 0, 100).getOrThrow();
-
-// Insert a row before the second row in the `dataFrame`. Returns a `Result` 
-// because the specified row length may not equal the row lengths in the 
-// data-frame, and the row-index may be out of bounds. 
-const dfWithNewRow = dataFrame.insertRowBefore(1, [10, 11, 12]).getOrThrow();
 
 // Add a row after the last row. Returns a `Result` because the specified 
 // row length may not equal the row lengths in the data-frame.
@@ -208,30 +199,99 @@ const dfWithoutRow = dataFrame.deleteRowAt(1).getOrThrow();
 
 // Delete a column
 const dfWithoutColumn = dataFrame.deleteColumnAt(1).getOrThrow();
+
+//
+// These calls modify the original dataFrame object, and return the original
+// modified dataFrame
+//
+
+// Set an element in-place (modifies the original DataFrame). In this case,
+// `dataFrame` and `updatedInPlace` are the same data-frame. Only use this
+// method when performance matters.
+const originalDataFrame = dataFrame.setElementInPlaceAt(0, 0, 100).getOrThrow();
+
+// Insert a row before the second row in the `dataFrame`. Returns a `Result` 
+// because the specified row length may not equal the row lengths in the 
+// data-frame, and the row-index may be out of bounds. 
+const stillOriginalDataFrame = dataFrame.insertRowBefore(1, [10, 11, 12]).getOrThrow();
 ```
+
 
 ### Transforming Data
 
 [(toc)](#table-of-contents)
 
+The previous section should an example of modifying the data-frames. This sections gives examples of transforming data-frames.
+
 ```typescript
+
+// Create a data-frame
+const dataFrame = DataFrame.from([
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9]
+]).getOrThrow()
+
+//
+// each of these examples leaves the original `dataFrame` unmodified and returns a new `DataFrame` instance.
+//
+
 // Transpose the DataFrame
-const transposed = df.transpose();
+const transposed = dataFrame.transpose();
 
 // Map all elements in the DataFrame
-const stringDF = df.mapElements(value => value.toString());  // Convert all numbers to strings
+const stringDF = dataFrame.mapElements(value => value.toString());  // Convert all numbers to strings
 
 // Map a row (returns a new DataFrame)
-const mappedRow = df.mapRow(1, value => value * 2).getOrThrow();
+const mappedRow = dataFrame.mapRow(1, value => value * 2).getOrThrow();
 
 // Map a column (returns a new DataFrame)
-const mappedColumn = df.mapColumn(1, value => value * 2).getOrThrow();
+const mappedColumn = dataFrame.mapColumn(1, value => value * 2).getOrThrow();
+
+//
+// these two examples modifies the original `dataFrame` and returns it
+//
 
 // Map a row in-place (modifies the original DataFrame)
-const mappedRowInPlace = df.mapRowInPlace(1, value => value * 2).getOrThrow();
+const mappedRowInPlace = dataFrame.mapRowInPlace(1, value => value * 2).getOrThrow();
 
 // Map a column in-place (modifies the original DataFrame)
-const mappedColumnInPlace = df.mapColumnInPlace(1, value => value * 2).getOrThrow();
+const mappedColumnInPlace = dataFrame.mapColumnInPlace(1, value => value * 2).getOrThrow();
+```
+
+The previous example showed simple transformations of the `dataFrame`. The next examples show how to do multiple transformations on a data-frame idiomatically and get back the resultant transformed data.
+
+```typescript
+// suppose we have some data that we want to transform
+const data = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9],
+  [10, 7, 12]
+]
+
+// create a `DataFrame` and manipulate it idiomatically, thanks to the `Result` class
+const dataFrame = DataFrame
+        // create a row-form data-frame
+        .from(data)
+        // grab the value (7) of the data element at row 2, column 0. return the value
+        // and the original data-frame a tuple. (flatMap because elementAt returns a Result)
+        .flatMap(dataFrame => dataFrame.elementAt(2, 0).map(value => ({dataFrame, value})))
+        // retrieve only the rows that contain the value 7 (simple map because rowSlices returns
+        // an array of rows)
+        .map(pair => pair.dataFrame.rowSlices().filter(row => row.some(value => value === pair.value)))
+        // and then create a new `DataFrame` from the filtered rows
+        .flatMap(rows => DataFrame.from(rows))
+        // transform each element by adding the product of the row-index and column-index to the value
+        .map(dataFrame => dataFrame.mapElements((value, rowIndex, columnIndex) => value + rowIndex * columnIndex))
+        // tranpose the data-frame
+        .map(dataFrame => dataFrame.transpose())
+        .getOrThrow()
+        
+// the values in the `dataFrame` are now        
+// [[7, 10],
+// [8, 7 + 1],
+// [9, 12 + 2]]
 ```
 
 ## Advanced Features
