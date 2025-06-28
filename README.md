@@ -123,6 +123,9 @@ const allRows = dataFrom.rowSlices();  // [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
 // Get all columns (doesn't need to return a `Result`)
 const allColumns = dataFrom.columnSlices();  // [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
+
+// grab a sub-frame for a range
+const subFrame = dataFrame.subFrame(indexFrom(1, 1), indexFrom(2, 2)).getOrThrow() // [[5, 6], [8, 9]]
 ```
 
 As another example, let's find all the rows in a data-frame that contain the same value as a some chosen element. Then let's create a new data-frame containing only those rows.
@@ -505,6 +508,7 @@ const dataFrame = DataFrame
 - `rowSlices(): Array<Array<V>>` - Returns all rows as a 2D array
 - `columnSlice(columnIndex: number): Result<Array<V>, string>` - Returns a copy of the specified column
 - `columnSlices(): Array<Array<V>>` - Returns all columns as a 2D array
+- `subFrame(start: Index, end: Index): Result<DataFrame<V>, string>` - Returns a sub-frame for the specified range
 - `copy(): DataFrame<V>` - Creates a copy of the DataFrame
 - `equals(other: DataFrame<V>): boolean` - Checks if this DataFrame equals another DataFrame
 
