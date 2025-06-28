@@ -1,7 +1,7 @@
 import {
     CellCoordinate,
     CellTag,
-    ColumnCoordinate,
+    ColumnCoordinate, ColumnTag,
     newCellTag,
     newColumnTag,
     newRowTag,
@@ -11,6 +11,7 @@ import {
     TagCoordinate,
     Tags
 } from './tags'
+import {indexFrom} from "./DataFrame";
 
 describe('tags', () => {
     describe('creating tags', () => {
@@ -266,6 +267,110 @@ describe('tags', () => {
 
                 expect(tags.hasTagFor("column-tag", RowCoordinate.of(1))).toBeTruthy()
                 expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeFalsy()
+            })
+
+            test("should be able to subset tags", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .subset(indexFrom(1, 1), indexFrom(2, 2))
+                expect(tags.length()).toBe(1)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeFalsy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeFalsy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 1))).toBeFalsy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 2))).toBeFalsy()
+            })
+
+            test("should be able to update tags for a removed row at the beginning", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeRow(0)
+                expect(tags.length()).toBe(2)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeFalsy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 2))).toBeTruthy()
+            })
+
+            test("should be able to update tags for a removed row in middle", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeRow(1)
+                expect(tags.length()).toBe(3)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 2))).toBeTruthy()
+            })
+
+            test("should be able to update tags for a removed row from end", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeRow(3)
+                expect(tags.length()).toBe(2)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 2))).toBeFalsy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 2))).toBeFalsy()
+            })
+
+            test("should be able to update tags for a removed column at the beginning", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeColumn(0)
+                expect(tags.length()).toBe(3)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 1))).toBeTruthy()
+            })
+
+            test("should be able to update tags for a removed column in the middle", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeColumn(1)
+                expect(tags.length()).toBe(2)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(0))).toBeFalsy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeFalsy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 1))).toBeTruthy()
+            })
+
+            test("should be able to update tags for a removed column at the end", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .removeColumn(2)
+                expect(tags.length()).toBe(2)
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(0))).toBeFalsy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 1))).toBeFalsy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 2))).toBeFalsy()
             })
 
             test("should correctly identify if a tag exists with hasTagFor", () => {

@@ -1,4 +1,5 @@
 import {failureResult, Result, successResult} from "result-fn";
+import {Index, indexFrom} from "./DataFrame";
 
 /**
  * Represents a coordinate in a data frame to which the tag applies.
@@ -98,7 +99,11 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
  * <p>
  * **Note** that when adding a new {@link Tag} type, add that tag type to this list
  */
-export type AvailableTagTypes<V extends TagValue, C extends TagCoordinate> = RowTag<V> | ColumnTag<V> | CellTag<V> | Tag<V, C>
+export type AvailableTagTypes<V extends TagValue, C extends TagCoordinate> =
+    RowTag<V>
+    | ColumnTag<V>
+    | CellTag<V>
+    | Tag<V, C>
 
 /**
  * Represents a tag associated with a row in a data frame.
@@ -293,13 +298,11 @@ export function newCellTag<T extends TagValue>(name: string, value: T, coordinat
  * @template C The type of the tags' coordinates
  */
 export class Tags<T extends TagValue, C extends TagCoordinate> {
-    private readonly tags: Array<Tag<T, C>>
-
     /**
      * Creates a new empty collection of tags.
      * @see Tags.with
      */
-    private constructor(tags: Array<Tag<T, C>> = []) {
+    private constructor(private readonly tags: Array<Tag<T, C>> = []) {
         this.tags = tags
     }
 
@@ -336,7 +339,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * Creates a copy of this {@link Tags} object.
      * @return A copy of this {@link Tags} object.
      */
-    private copy(): Tags<T, C> {
+    public copy(): Tags<T, C> {
         return new Tags<T, C>(this.tags.slice())
     }
 
@@ -524,6 +527,78 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
             return tag
         }) as Array<Tag<T, C>>
         return new Tags<T, C>(tags)
+    }
+
+    /**
+     * Returns tags that are part of the subset defined by the range. All tags have their
+     * coordinates shifted so that they align with the new coordinates in the subset.
+     * @param start The upper left-hand corner of the range
+     * @param end The lower right-hand corner of the range
+     * @return The tags, with their shifted coordinates, whose coordinates fall in the
+     * specified range
+     */
+    public subset(start: Index, end: Index): Tags<T, C> {
+        const tags = this.tags
+            // filter out any tags whose coordinates are not within range
+            .filter(tag => isTagInRange(tag, start, end))
+            // shift the coordinates according to the new range
+            .map(tag => shiftCoordinates(tag, start))
+
+        return new Tags<T, C>(tags as Array<Tag<T, C>>)
+    }
+
+    /**
+     * Updates the coordinates in the tags to accommodate a new row
+     * @param rowIndex The index of the new row
+     * @return The tags with their coordinates shifted
+     */
+    public insertRow(rowIndex: number): Tags<T, C> {
+        const tags = this.tags.map(tag => incrementCoordinatesForRowInsert(tag, rowIndex))
+        return new Tags<T, C>(tags as Array<Tag<T, C>>)
+    }
+
+    /**
+     * Updates the coordinates in the tags to accommodate a new row
+     * @param columnIndex The index of the new column
+     * @return The tags with their coordinates shifted
+     */
+    public insertColumn(columnIndex: number): Tags<T, C> {
+        const tags = this.tags.map(tag => incrementCoordinatesForColumnInsert(tag, columnIndex))
+        return new Tags<T, C>(tags as Array<Tag<T, C>>)
+    }
+
+    /**
+     * Updates the tags and their coordinates for a removed row
+     * @param rowIndex The index of the row that was removed
+     * @return The tags with their indexes shifted to accommodate the removal of a row. Any tags
+     * that have matching rows are removed
+     */
+    public removeRow(rowIndex: number): Tags<T, C> {
+        const tags = this.tags
+            .filter(tag => {
+                const [row, ] = tag.coordinate.coordinate() as [number, number]
+                return row !== rowIndex
+            })
+            .map(tag => decrementCoordinatesForRowInsert(tag, rowIndex))
+            .filter(tag => isTagInRange(tag, indexFrom(0, 0), indexFrom(Infinity, Infinity)))
+        return new Tags<T, C>(tags as Array<Tag<T, C>>)
+    }
+
+    /**
+     * Updates the tags and their coordinates for a removed row
+     * @param columnIndex The index of the column that was removed
+     * @return The tags with their indexes shifted to accommodate the removal of a row. Any tags
+     * that have matching column are removed
+     */
+    public removeColumn(columnIndex: number): Tags<T, C> {
+        const tags = this.tags
+            .filter(tag => {
+                const [, column] = tag.coordinate.coordinate() as [number, number]
+                return column !== columnIndex
+            })
+            .map(tag => decrementCoordinatesForColumnInsert(tag, columnIndex))
+            .filter(tag => isTagInRange(tag, indexFrom(0, 0), indexFrom(Infinity, Infinity)))
+        return new Tags<T, C>(tags as Array<Tag<T, C>>)
     }
 
     /**
@@ -749,3 +824,81 @@ export class CellCoordinate implements TagCoordinate {
         return `(${this.row}, ${this.column})`
     }
 }
+
+function shiftCoordinates<T extends TagValue, C extends TagCoordinate>(tag: Tag<T, C>, start: Index): AvailableTagTypes<T, C> {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    if (isCellTag(tag)) {
+        return newCellTag(tag.name, tag.value, CellCoordinate.of(row - start.row, column - start.column))
+    }
+    if (isRowTag(tag)) {
+        return newRowTag(tag.name, tag.value, RowCoordinate.of(row - start.row))
+    }
+    if (isColumnTag(tag)) {
+        return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(column - start.column))
+    }
+    return tag
+}
+
+function isTagInRange<T extends TagValue, C extends TagCoordinate>(tag: AvailableTagTypes<T, C>, start: Index, end: Index): boolean {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    return (isCellTag(tag) && row >= start.row && row <= end.row && column >= start.column && column <= end.column) ||
+        (isRowTag(tag) && row >= start.row && row <= end.row) ||
+        (isColumnTag(tag) && column >= start.column && column <= end.column)
+}
+
+function incrementCoordinatesForRowInsert<T extends TagValue, C extends TagCoordinate>(tag: Tag<T, C>, rowIndex: number): AvailableTagTypes<T, C> {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    if (isCellTag(tag)) {
+        return newCellTag(tag.name, tag.value, CellCoordinate.of(row >= rowIndex ? row + 1 : row, column))
+    }
+    if (isRowTag(tag)) {
+        return newRowTag(tag.name, tag.value, RowCoordinate.of(row >= rowIndex ? row + 1 : row))
+    }
+    if (isColumnTag(tag)) {
+        return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(column))
+    }
+    return tag
+}
+
+function incrementCoordinatesForColumnInsert<T extends TagValue, C extends TagCoordinate>(tag: Tag<T, C>, columnIndex: number): AvailableTagTypes<T, C> {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    if (isCellTag(tag)) {
+        return newCellTag(tag.name, tag.value, CellCoordinate.of(row, column >= columnIndex ? column + 1 : column))
+    }
+    if (isRowTag(tag)) {
+        return newRowTag(tag.name, tag.value, RowCoordinate.of(row))
+    }
+    if (isColumnTag(tag)) {
+        return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(column >= columnIndex ? column + 1 : column))
+    }
+    return tag
+}
+
+function decrementCoordinatesForRowInsert<T extends TagValue, C extends TagCoordinate>(tag: Tag<T, C>, rowIndex: number): AvailableTagTypes<T, C> {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    if (isCellTag(tag)) {
+        return newCellTag(tag.name, tag.value, CellCoordinate.of(row > rowIndex ? row - 1 : row, column))
+    }
+    if (isRowTag(tag)) {
+        return newRowTag(tag.name, tag.value, RowCoordinate.of(row > rowIndex ? row - 1 : row))
+    }
+    if (isColumnTag(tag)) {
+        return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(column))
+    }
+    return tag
+}
+
+function decrementCoordinatesForColumnInsert<T extends TagValue, C extends TagCoordinate>(tag: Tag<T, C>, columnIndex: number): AvailableTagTypes<T, C> {
+    const [row, column] = tag.coordinate.coordinate() as [number, number]
+    if (isCellTag(tag)) {
+        return newCellTag(tag.name, tag.value, CellCoordinate.of(row, column > columnIndex ? column - 1 : column))
+    }
+    if (isRowTag(tag)) {
+        return newRowTag(tag.name, tag.value, RowCoordinate.of(row))
+    }
+    if (isColumnTag(tag)) {
+        return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(column > columnIndex ? column - 1 : column))
+    }
+    return tag
+}
+

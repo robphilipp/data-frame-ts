@@ -79,10 +79,10 @@ export function indexFrom(row: number, column: number): Index {
  * ```
  */
 export class DataFrame<V> {
-    private readonly data: Array<V>
-    private readonly numColumns: number
-    private readonly numRows: number
-    private tags: Tags<TagValue, TagCoordinate> = Tags.empty()
+    // private readonly data: Array<V>
+    // private readonly numColumns: number
+    // private readonly numRows: number
+    // private tags: Tags<TagValue, TagCoordinate> = Tags.empty()
 
     /**
      * Constructs an instance of the class with the given data, number of rows, and number of columns.
@@ -90,11 +90,14 @@ export class DataFrame<V> {
      * @param data The data to initialize the instance with.
      * @param numRows The number of rows.
      * @param numColumns The number of columns.
+     * @param tags The tags associated with the data-frame
      */
-    private constructor(data: Array<V>, numRows: number, numColumns: number) {
-        this.data = data
-        this.numRows = numRows
-        this.numColumns = numColumns
+    private constructor(
+        private readonly data: Array<V>,
+        private readonly numRows: number,
+        private readonly numColumns: number,
+        private tags: Tags<TagValue, TagCoordinate>// = Tags.empty()
+    ) {
     }
 
     /**
@@ -122,10 +125,10 @@ export class DataFrame<V> {
      */
     static from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string> {
         if (data.length === 0) {
-            return successResult(new DataFrame<V>([], 0, 0))
+            return successResult(new DataFrame<V>([], 0, 0, Tags.empty()))
         }
         return validateDimensions(data, rowForm)
-            .map(data => new DataFrame<V>(data.flatMap(row => row), data.length, data[0].length))
+            .map(data => new DataFrame<V>(data.flatMap(row => row), data.length, data[0].length, Tags.empty()))
             .map(df => rowForm ? df : df.transpose())
     }
 
@@ -224,7 +227,7 @@ export class DataFrame<V> {
      * ```
      */
     public copy(): DataFrame<V> {
-        return new DataFrame(this.data.slice(), this.numRows, this.numColumns)
+        return new DataFrame(this.data.slice(), this.numRows, this.numColumns, this.tags.copy())
     }
 
     /**
@@ -444,7 +447,8 @@ export class DataFrame<V> {
                 data.push(this.data[row * this.numColumns + column])
             }
         }
-        return successResult(new DataFrame(data, end.row - start.row + 1, end.column - start.column + 1))
+        const tags = this.tags.subset(start, end)
+        return successResult(new DataFrame(data, end.row - start.row + 1, end.column - start.column + 1, tags))
     }
 
     /**
@@ -517,7 +521,7 @@ export class DataFrame<V> {
         if (rowIndex >= 0 && rowIndex < this.numRows && columnIndex >= 0 && columnIndex <= this.numColumns) {
             const updated = this.data.slice()
             updated[rowIndex * this.numColumns + columnIndex] = value
-            return successResult(new DataFrame(updated, this.numRows, this.numColumns))
+            return successResult(new DataFrame(updated, this.numRows, this.numColumns, this.tags.copy()))
         }
         return failureResult(
             `(DataFrame::setElementAt) Index out of bounds; ` +
@@ -627,7 +631,9 @@ export class DataFrame<V> {
                 .concat(row)
                 // rows after the insert point
                 .concat(this.data.slice(rowIndex * this.numColumns, this.data.length))
-        return successResult(new DataFrame(newRows, this.numRows + 1, this.numColumns))
+
+        const tags = this.tags.insertRow(rowIndex)
+        return successResult(new DataFrame(newRows, this.numRows + 1, this.numColumns, tags))
     }
 
     /**
@@ -673,7 +679,8 @@ export class DataFrame<V> {
             return failureResult(`(DataFrame::pushRow) The row must have the same number of elements as the data has columns. ` +
                 `num_rows: ${this.numRows}; num_columns: ${row.length}`)
         }
-        return successResult(new DataFrame(this.data.concat(row), this.numRows + 1, this.numColumns))
+        // todo adjust tags and add them to the constructor
+        return successResult(new DataFrame(this.data.concat(row), this.numRows + 1, this.numColumns, this.tags.copy()))
     }
 
     /**
@@ -728,7 +735,9 @@ export class DataFrame<V> {
 
         const rows: Array<Array<V>> = this.rowSlices()
         rows.forEach((row: Array<V>, rowIndex) => row.splice(columnIndex, 0, column[rowIndex]))
-        return DataFrame.from(rows)
+
+        const tags = this.tags.insertColumn(columnIndex)
+        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns + 1, tags))
     }
 
     /**
@@ -825,7 +834,9 @@ export class DataFrame<V> {
 
         const copy = this.data.slice()
         copy.splice(rowIndex * this.numColumns, this.numColumns)
-        return successResult(new DataFrame(copy, this.numRows - 1, this.numColumns))
+
+        const tags = this.tags.removeRow(rowIndex)
+        return successResult(new DataFrame(copy, this.numRows - 1, this.numColumns, tags))
     }
 
     /**
@@ -875,7 +886,9 @@ export class DataFrame<V> {
         }
         const rows = this.rowSlices()
         rows.forEach((row: Array<V>) => row.splice(columnIndex, 1))
-        return DataFrame.from(rows)
+
+        const tags = this.tags.removeColumn(columnIndex)
+        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns - 1, tags))
     }
 
     /**
@@ -915,9 +928,7 @@ export class DataFrame<V> {
                 transposed[col * this.numRows + row] = this.data[row * this.numColumns + col]
             }
         }
-        const dataFrame = new DataFrame(transposed, this.numColumns, this.numRows)
-        dataFrame.tags = this.tags.transpose()
-        return dataFrame
+        return new DataFrame(transposed, this.numColumns, this.numRows, this.tags.transpose())
     }
 
     /**
@@ -959,7 +970,7 @@ export class DataFrame<V> {
             const columnIndex = index % this.numColumns
             return mapper(value, rowIndex, columnIndex)
         })
-        return new DataFrame(updatedData, this.numRows, this.numColumns)
+        return new DataFrame(updatedData, this.numRows, this.numColumns, this.tags.copy())
     }
 
     /**
@@ -1006,7 +1017,7 @@ export class DataFrame<V> {
         for (let i = rowIndex * this.numColumns; i < (rowIndex + 1) * this.numColumns; i++) {
             updated[i] = mapper(updated[i])
         }
-        return successResult(new DataFrame(updated, this.numRows, this.numColumns))
+        return successResult(new DataFrame(updated, this.numRows, this.numColumns, this.tags.copy()))
     }
 
     /**
@@ -1095,7 +1106,7 @@ export class DataFrame<V> {
         for (let i = columnIndex; i < this.data.length; i += this.numColumns) {
             updated[i] = mapper(updated[i])
         }
-        return successResult(new DataFrame(updated, this.numRows, this.numColumns))
+        return successResult(new DataFrame(updated, this.numRows, this.numColumns, this.tags.copy()))
     }
 
     /**
