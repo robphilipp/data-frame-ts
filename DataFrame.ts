@@ -109,6 +109,9 @@ export class DataFrame<V> {
      * ```
      */
     static from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string> {
+        if (data.length === 0) {
+            return successResult(new DataFrame<V>([], 0, 0))
+        }
         return validateDimensions(data, rowForm)
             .map(data => new DataFrame<V>(data.flatMap(row => row), data.length, data[0].length))
             .map(df => rowForm ? df : df.transpose())
@@ -139,6 +142,29 @@ export class DataFrame<V> {
      */
     static fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string> {
         return DataFrame.from(data, false)
+    }
+
+    /**
+     * Creates an empty DataFrame. Returns a {@link Result} containing the empty {@link DataFrame}
+     *
+     * @template T the element type
+     * @return A {@link Result} object containing an empty data frame
+     *
+     * @example
+     * ```typescript
+     * // create a data-frame with numbers and strings
+     * const dataFrame: Result<DataFrame<number | string>, string> = DataFrame.empty<number | string>()
+     * ```
+     */
+    static empty<V>(): Result<DataFrame<V>, string> {
+        return DataFrame.from([], false)
+    }
+
+    /**
+     * @return `true` if the data-frame is empty; `false` if it contains data
+     */
+    public isEmpty(): boolean {
+        return this.data.length === 0
     }
 
     /**
@@ -1249,6 +1275,16 @@ export class DataFrame<V> {
      */
     public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string> {
         const [row, column] = tag.coordinate.coordinate()
+        if (row < 0 || row >= this.numRows) {
+            return failureResult(
+                `(DataFrame::cellsTaggedWith) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${row}`
+            )
+        }
+        if (column < 0 || column >= this.numColumns) {
+            return failureResult(
+                `(DataFrame::cellsTaggedWith) Invalid column index. Column index must be in [0, ${this.numColumns}); column_index: ${column}`
+            )
+        }
         if (isRowTag(tag)) {
             if (this.rowTagsFor(row).some(tg => tg.equals(tag))) {
                 return this.rowSlice(row)
@@ -1268,7 +1304,7 @@ export class DataFrame<V> {
             return successResult([])
         }
         if (isCellTag(tag)) {
-            if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
+            if (this.cellTagsFor(row, column).some(tg => tg.equals(tag))) {
                 return this.elementAt(row, column).map(value => [value])
                     .map(values => values
                         .map(value => ({value, row, column} as CellValue<V>))
@@ -1276,11 +1312,59 @@ export class DataFrame<V> {
             }
             return successResult([])
         }
-        return failureResult(
-            `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
-            `tag: ${tag.toString()}`
-        )
+        // catch-all for any tag types.
+        if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
+            return this.elementAt(row, column).map(value => [value])
+                .map(values => values
+                    .map(value => ({value, row, column} as CellValue<V>))
+                )
+        }
+        return successResult([])
+        // return failureResult(
+        //     `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
+        //     `tag: ${tag.toString()}`
+        // )
     }
+    // public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string> {
+    //     const [row, column] = tag.coordinate.coordinate()
+    //     if (isRowTag(tag)) {
+    //         if (this.rowTagsFor(row).some(tg => tg.equals(tag))) {
+    //             return this.rowSlice(row)
+    //                 .map(values => values
+    //                     .map((value, index) => ({value, row, column: index} as CellValue<V>))
+    //                 )
+    //         }
+    //         return successResult([])
+    //     }
+    //     if (isColumnTag(tag)) {
+    //         if (this.columnTagsFor(column).some(tg => tg.equals(tag))) {
+    //             return this.columnSlice(column)
+    //                 .map(values => values
+    //                     .map((value, index) => ({value, row: index, column} as CellValue<V>))
+    //                 )
+    //         }
+    //         return successResult([])
+    //     }
+    //     if (isCellTag(tag)) {
+    //         if (this.cellTagsFor(row, column).some(tg => tg.equals(tag))) {
+    //             return this.elementAt(row, column).map(value => [value])
+    //                 .map(values => values
+    //                     .map(value => ({value, row, column} as CellValue<V>))
+    //                 )
+    //         }
+    //         return successResult([])
+    //     }
+    //     if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
+    //         return this.elementAt(row, column).map(value => [value])
+    //             .map(values => values
+    //                 .map(value => ({value, row, column} as CellValue<V>))
+    //             )
+    //     }
+    //     return failureResult(
+    //         `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
+    //         `tag: ${tag.toString()}`
+    //     )
+    // }
 
     /**
      * Retrieves all the {@link RowTag} objects associated with the specified row index

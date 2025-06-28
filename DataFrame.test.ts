@@ -55,6 +55,14 @@ describe("Testing data-frame behavior", () => {
             expect(result.columnCount()).toEqual(4)
         })
 
+        test("should be able to create an empty data-frame", () => {
+            const result = DataFrame.empty()
+            expect(result.succeeded).toBeTruthy()
+            expect(result.getOrThrow().rowCount()).toEqual(0)
+            expect(result.getOrThrow().columnCount()).toEqual(0)
+            expect(result.getOrThrow().isEmpty()).toBe(true)
+        })
+
         test("should not be able to create a data-frame for a 2D array in columnar form with invalid dimensions", () => {
             const result = DataFrame.fromColumnData([
                 [1, 2, 3], // column 1
@@ -721,6 +729,22 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.columnCount()).toBe(3)
         })
 
+        test("should be able to tag a cell with an object", () => {
+            const taggedDataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9]
+                ])
+                .flatMap(df => df.tagCell(1, 2, "cell-tag", {prop1: "property-1", prop2: 314159}))
+                .getOrThrow()
+
+            const tags = taggedDataFrame.tagsFor(1, 2)
+            expect(tags).toHaveLength(1)
+            expect(tags[0].value).toHaveProperty("prop1", "property-1")
+            expect(tags[0].value).toHaveProperty("prop2", 314159)
+        })
+
         test("should return error when tagging cell with invalid row index", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
@@ -827,6 +851,20 @@ describe("Testing data-frame behavior", () => {
                 expect(cellValues).toHaveLength(0)
             })
 
+            test("should not retrieve cells for a tag whose row-index is out of bounds", () => {
+                const tag = newCellTag("cell-tag", "not-cell-value", CellCoordinate.of(20, 2))
+                const result = taggedDataFrame.cellsTaggedWith(tag)
+                expect(result.failed).toBeTruthy()
+                expect(result.error).toEqual("(DataFrame::cellsTaggedWith) Invalid row index. Row index must be in [0, 4); row_index: 20")
+            })
+
+            test("should not retrieve cells for a tag whose column-index is out of bounds", () => {
+                const tag = newCellTag("cell-tag", "not-cell-value", CellCoordinate.of(2, 20))
+                const result = taggedDataFrame.cellsTaggedWith(tag)
+                expect(result.failed).toBeTruthy()
+                expect(result.error).toEqual("(DataFrame::cellsTaggedWith) Invalid column index. Column index must be in [0, 3); column_index: 20")
+            })
+
             test("should fail if tag type is not an AvailableTagType object", () => {
                 class MySpecialTag<T extends TagValue> extends Tag<T, RowCoordinate> {
                     constructor(readonly name: string, readonly value: T, readonly coordinate: RowCoordinate) {
@@ -839,9 +877,9 @@ describe("Testing data-frame behavior", () => {
                 }
 
                 const tag = new MySpecialTag("special-tag", "special-value", RowCoordinate.of(0))
-                const cellValues = taggedDataFrame.cellsTaggedWith(tag)
-                expect(cellValues.failed).toBe(true)
-                expect(cellValues.error).toEqual("(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTagtag: special-tag:special-value:(0, *)")
+                const result = taggedDataFrame.cellsTaggedWith(tag)
+                expect(result.succeeded).toBe(true)
+                expect(result.getOrThrow()).toHaveLength(0)
             })
         })
 
@@ -906,6 +944,19 @@ describe("Testing data-frame behavior", () => {
                 expect(tags[0].name).toEqual("row-tag-2")
                 expect(tags[0].value).toEqual("row-value")
                 expect(isRowTag(tags[0])).toBeTruthy()
+            })
+
+            test("should be able to retrieve the row tag for the second row", () => {
+                const tags = taggedDataFrame.tagsFor(1, NaN)
+                expect(tags).toHaveLength(1)
+                expect(tags[0].name).toEqual("row-tag-2")
+                expect(tags[0].value).toEqual("row-value")
+                expect(isRowTag(tags[0])).toBeTruthy()
+            })
+
+            test("should be able to return that there are no column tags for the third column", () => {
+                const tags = taggedDataFrame.tagsFor(NaN, 2)
+                expect(tags).toHaveLength(0)
             })
 
             test("should not be able to retrieve a cell tag for the second row and third column", () => {

@@ -16,7 +16,7 @@ A lightweight, immutable, two-dimensional data structure for TypeScript that all
   - [Tagging](#tagging)
     - [Adding Tags](#adding-tags)
     - [Retrieving Tags](#retrieving-tags)
-    - [Advanced Tag Operations](#advanced-tag-operations)
+    - [Retrieving Cells That Are Tagged](#retrieving-cells-that-are-tagged)
   - [Error Handling](#error-handling)
 - [API Reference](#api-reference)
   - [DataFrame Creation Methods](#dataframe-creation-methods)
@@ -298,39 +298,66 @@ const dataFrame = DataFrame
 
 [(toc)](#table-of-contents)
 
+The `DataFrame` class supports tagging rows, columns, and cells. AI calls this an advanced feature. Who am I to argue with AI? According to AI, the other "advanced feature" is the use of the [Result](https://github.com/robphilipp/result) class for error handling. See below.
+
 ### Tagging
 
 [(toc)](#table-of-contents)
 
-The DataFrame supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the DataFrame (row, column, or cell).
+Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows for flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
+
+The `DataFrame` class supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the `DataFrame`. 
 
 #### Adding Tags
 
 [(toc)](#table-of-contents)
 
+Tagging elements in a `DataFrame` is achieved by using the `tagRow(...)`, `tagColumn(...)`, and `tagCell(...)` methods. 
+1. Tagging a row means that all the elements (cells) in that row have that tag. 
+2. Tagging a column means that all the elements (cells) in that column have that tag. 
+3. Tagging a cell, only tags the cell at the specified (row, column) coordinates.
+
+A row, column, and cell can be tagged with any data type that implements the `TagValue` interface. Essentially, the data type must implement a `toString()` method. Not a high bar.
+
+There is an **important** difference between modifying data in a data-frame, and adding tags. Recall that (except for the "in-place" methods) when modifying data in a data-frame, the original data-frame is unmodified. Instead of modifying the original data-frame, a modified copy is returned. Togging is different. When using tagging operations, the original data-frame is modified and returned. The difference is that tagging updates metadata describing aspects of the data-frame rather than the data in the data-frame. 
+
 ```typescript
+const dataFrame = DataFrame.from([
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9]
+]).getOrThrow()
+
 // Tag a row
-df.tagRow(0, "category", "header").getOrThrow();
+dataFrame.tagRow(0, "category", "header").getOrThrow();
 
 // Tag a column
-df.tagColumn(1, "dataType", "numeric").getOrThrow();
+dataFrame.tagColumn(1, "dataType", "numeric").getOrThrow();
 
 // Tag a cell
-df.tagCell(1, 2, "highlight", "true").getOrThrow();
+dataFrame.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}).getOrThrow();
+
 
 // Chain multiple tag operations
-const taggedDf = df
-    .tagRow(0, "category", "header")
-    .getOrThrow()
-    .tagColumn(1, "dataType", "numeric")
-    .getOrThrow()
-    .tagCell(1, 2, "highlight", "true")
-    .getOrThrow();
+const taggedDataFrame = dataFrame.tagRow(0, "category", "header")
+        .flatMap(df => df.tagColumn(1, "dataType", "numeric"))
+        .flatMap(df => df.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}))
+        .getOrThrow()
+
+// taggedDataFrame and the original dataFrame are the same object
 ```
 
 #### Retrieving Tags
 
 [(toc)](#table-of-contents)
+
+Presumably, data-frames are tagged so that we can use the information in the tag later. The next examples show how to retrieve tags based on their type (row, column, cell). There are some important distinctions in the behavior of the tag retrieval methods.
+
+The `tagsFor(rowIndex: number, columnIndex: number)` method returns **all** tags on that cell. This means that if the cell is in a row that has a row-tag, that row-tag would also be returned. Likewise, if the cell is in a column that has a column-tag, it is also returned. This is the expected use case. However, if you really only want cell-tags, you can use the `cellTagsFor(rowIndex: number, columnIndex: number)` method.
+
+The `cellTagsFor(rowIndex: number, columnIndex: number)` returns **only** cell-tags that apply to the element in the (rowIndex, columnIndex) of the data-frame.
+
+The `rowTagsFor(rowIndex: number)` returns **only** row-tags for any cell in that row. And the `columnTagsFor(columnIndex: number)` returns only the column-tags for cells in that column.
 
 ```typescript
 // Create a tagged DataFrame
@@ -341,8 +368,7 @@ const dataFrame = DataFrame.from([
     [10, 11, 12]
 ]).getOrThrow();
 
-const taggedDataFrame = dataFrame
-    .tagRow(0, "row-tag", "row-value")
+const taggedDataFrame = dataFrame.tagRow(0, "row-tag", "row-value")
     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
     .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
     .flatMap(df => df.tagRow(0, "row-tag-2", "row-value"))
@@ -357,20 +383,19 @@ const rowTags = taggedDataFrame.rowTagsFor(0);
 const columnTags = taggedDataFrame.columnTagsFor(1);
 // columnTags contains one tag: "column-tag"
 
-// Retrieve cell tags
-const cellTags = taggedDataFrame.tagsFor(2, 2);
-// cellTags contains one tag: "cell-tag"
+// Retrieve cell tags for the third row and fourth column
+const cellTags = taggedDataFrame.cellTagsFor(2, 2);
+
+// Retrieve all tags for the third row and fourth column, including
+// row and column tags if the cell is in a row or column that is tagged.
+const allTags = taggedDataFrame.tagsFor(2, 2);
 
 // Check if a row has tags
 const hasRowTag = taggedDataFrame.hasRowTagFor(0);  // true
 const hasNoRowTag = taggedDataFrame.hasRowTagFor(2);  // false
 ```
 
-Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows for flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
-
-#### Advanced Tag Operations
-
-[(toc)](#table-of-contents)
+In some cases, you may not want to retrieve the tag for a cell, row, or column. Instead, you may only need to know **if** there is a tag on that cell. The following example shows how to do that.
 
 ```typescript
 // Filter tags based on a predicate
@@ -392,36 +417,68 @@ const hasCellTag = taggedDataFrame.hasCellTagFor(2, 2);  // true if cell at (2,2
 const hasAnyTag = taggedDataFrame.hasTagFor(1, 1);  // true if position (1,1) has any tags
 ```
 
+#### Retrieving Cells That Are Tagged
+
+[(toc)](#table-of-contents)
+
+The previous example demonstrated how to retrieve tags and determine whether a cell is tagged. In this section we demonstrate retrieving the cells that are tagged. The `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` method provides a means for doing this. When handed a tag, it returns a `Result` holding a array of `CellValue<T>` objects of the shape
+
+```typescript
+{
+  value: V
+  row: number
+  column: number
+}
+```
+The reason that the `cellsTaggedWith(...)` method returns a `Result` is that a tag has associated coordinates. The coordinates must be valid. When they are out of bounds, the `Result` has an error message that explains the reason.
+
+```typescript
+const dataFrame = DataFrame
+        .from([
+          [1, 2, 3],
+          [4, 5, 6],
+          [7, 8, 9],
+          [10, 11, 12]
+        ])
+        .tagRow(0, "row-tag", "row-value")
+        .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+        .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+        .getOrThrow()
+
+// Retrieve cells tagged with a row-tag that is name "row-tag", has a value" 
+// "row_value", and is in the first row. We expect to get back the array:
+// [{"row": 0, "column": 0, "value": 1}, 
+//  {"row": 0, "column": 1, "value": 2}, 
+//  {"row": 0, "column": 2, "value": 3}]
+const cellValues = dataFrame
+        .cellsTaggedWith(newRowTag("row-tag", "row-value", RowCoordinate.of(0)))
+        .getOrThrow()
+```
+
 ### Error Handling
 
 [(toc)](#table-of-contents)
 
-The library uses a `Result` type from the `result-fn` package for error handling:
+The library uses a [Result](https://github.com/robphilipp/result) class from the [result-fn](https://www.npmjs.com/package/result-fn) package for error handling. In a nutshell, the `Result` class is returned from a function that could fail. The `Result` holds either a `success` or a `failure`, depending on the outcome. The value of the `success` is the successful execution of the function. The value of the `failure` is an error object, that could be a string or some other more complex object. `Result`s can be chained. In a results chain, the evaluation in the chain is only performed if the previous evaluation resulted in a `success`, otherwise it drops through. Here are some examples.
 
 ```typescript
-// Safe handling of operations that might fail
-const result = DataFrame.from([
-  [1, 2, 3],
-  [4, 5]  // Different number of columns will cause validation to fail
-]);
-
-if (result.succeeded) {
-  const df = result.value;
-  // Use the DataFrame
-} else {
-  console.error(result.error);
-}
-
-// Alternative using getOrThrow (will throw an error if operation fails)
-try {
-  const df = DataFrame.from([
-    [1, 2, 3],
-    [4, 5, 6]
-  ]).getOrThrow();
-  // Use the DataFrame
-} catch (error) {
-  console.error(error);
-}
+const dataFrame = DataFrame
+        // create a row-form data-frame
+        .from(data)
+        // grab the value (7) of the data element at row 2, column 0. return the value
+        // and the original data-frame a tuple. (flatMap because elementAt returns a Result)
+        .flatMap(dataFrame => dataFrame.elementAt(2, 0).map(value => ({dataFrame, value})))
+        // retrieve only the rows that contain the value 7 (simple map because rowSlices returns
+        // an array of rows)
+        .map(pair => pair.dataFrame.rowSlices().filter(row => row.some(value => value === pair.value)))
+        // and then create a new `DataFrame` from the filtered rows
+        .flatMap(rows => DataFrame.from(rows))
+        // transform each element by adding the product of the row-index and column-index to the value
+        .map(dataFrame => dataFrame.mapElements((value, rowIndex, columnIndex) => value + rowIndex * columnIndex))
+        // tranpose the data-frame
+        .map(dataFrame => dataFrame.transpose())
+        // when there is an error, this will return an empty data-frame (see also getOrThrow)
+        .getOrElse(DataFrame.empty())
 ```
 
 ## API Reference
