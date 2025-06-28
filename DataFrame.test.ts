@@ -9,7 +9,7 @@ import {
     isRowTag, newCellTag, newColumnTag,
     newRowTag,
     RowCoordinate,
-    RowTag, Tag, TagValue
+    RowTag, Tag, Tags, TagValue
 } from "./tags";
 
 describe("Testing data-frame behavior", () => {
@@ -675,6 +675,35 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.columnCount()).toBe(3)
             expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()
             expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
+        })
+
+        test("should transpose tags with dataframe is transposed", () => {
+            const dataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                .map(df => df.transpose())
+                .getOrThrow()
+
+            // Verify the result is a DataFrame
+            expect(dataFrame).toBeDefined()
+            expect(dataFrame.rowCount()).toBe(3)
+            expect(dataFrame.columnCount()).toBe(4)
+
+            expect(dataFrame.hasColumnTagFor(0)).toBeTruthy()
+            expect(dataFrame.hasRowTagFor(0)).toBeFalsy()
+
+            expect(dataFrame.hasRowTagFor(1)).toBeTruthy()
+            expect(dataFrame.hasColumnTagFor(1)).toBeFalsy()
+
+            expect(dataFrame.hasCellTagFor(2, 3)).toBeTruthy()
+            expect(dataFrame.hasCellTagFor(3, 2)).toBeFalsy()
         })
 
         test("should return error when tagging row with invalid index", () => {

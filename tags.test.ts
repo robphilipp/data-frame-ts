@@ -249,6 +249,25 @@ describe('tags', () => {
                 expect(removeResult.failureOrUndefined()).toContain("Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: non-existent-id");
             });
 
+            test("should be able to transpose the tags", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .transpose()
+                expect(tags.length()).toBe(3)
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 3))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 2))).toBeFalsy()
+
+                expect(tags.hasTagFor("row-tag", ColumnCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeFalsy()
+
+                expect(tags.hasTagFor("column-tag", RowCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeFalsy()
+            })
+
             test("should correctly identify if a tag exists with hasTagFor", () => {
                 const tags = Tags.with<string>(
                     newRowTag("row-tag", "value", RowCoordinate.of(0)),

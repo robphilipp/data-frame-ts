@@ -827,7 +827,8 @@ export class DataFrame<V> {
     }
 
     /**
-     * Transposes the current DataFrame, swapping its rows and columns.
+     * Transposes the current DataFrame, swapping its rows and columns. This method also
+     * transposes any tags that have been applied to the DataFrame.
      *
      * @return {DataFrame<V>} A new DataFrame instance where rows and columns of the original DataFrame are swapped.
      *
@@ -862,7 +863,9 @@ export class DataFrame<V> {
                 transposed[col * this.numRows + row] = this.data[row * this.numColumns + col]
             }
         }
-        return new DataFrame(transposed, this.numColumns, this.numRows)
+        const dataFrame = new DataFrame(transposed, this.numColumns, this.numRows)
+        dataFrame.tags = this.tags.transpose()
+        return dataFrame
     }
 
     /**

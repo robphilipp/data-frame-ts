@@ -503,6 +503,30 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     }
 
     /**
+     * Transposes all the tags in the Tags object and returns a new Tags object with the new tags.
+     * Transposing a tag mean that it transposes the coordinates. Cell-tags simple have their row-index
+     * swapped with their column-index. Row-tags get converted to column-tags. And column-tags get
+     * converted to row-tags.
+     * @return a new Tags object with all the tags transposed.
+     */
+    public transpose(): Tags<T, C> {
+        const tags = this.tags.map(tag => {
+            const [row, column] = tag.coordinate.coordinate() as [number, number]
+            if (isCellTag(tag)) {
+                return newCellTag(tag.name, tag.value, CellCoordinate.of(column, row))
+            }
+            if (isRowTag(tag)) {
+                return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(row))
+            }
+            if (isColumnTag(tag)) {
+                return newRowTag(tag.name, tag.value, RowCoordinate.of(column))
+            }
+            return tag
+        }) as Array<Tag<T, C>>
+        return new Tags<T, C>(tags)
+    }
+
+    /**
      * Returns an array of {@link Tag} objects that are associated with a coordinate
      * @param rowIndex The row index
      * @param columnIndex The column index
