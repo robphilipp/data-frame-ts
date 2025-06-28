@@ -1,24 +1,27 @@
 import {
     CellCoordinate,
+    CellTag,
     ColumnCoordinate,
     newCellTag,
     newColumnTag,
     newRowTag,
     newTag,
     RowCoordinate,
-    TagCoordinate, Tags, TagValue
+    RowTag,
+    TagCoordinate,
+    Tags
 } from './tags'
 
 describe('tags', () => {
     describe('creating tags', () => {
         test('should be able to create an individual tag', () => {
-            const tag = newTag<string, RowCoordinate>("mytag", "nicetag", RowCoordinate.of(0))
+            const tag: RowTag<string> = newTag(RowTag, "mytag", "nicetag", RowCoordinate.of(0))
             expect(tag).toBeDefined()
             expect(tag.id).toBe("tag-mytag-(0,*)")
             expect(tag.name).toBe("mytag")
             expect(tag.value).toBe("nicetag")
             expect(tag.coordinate).toEqual(RowCoordinate.of(0))
-            expect(tag.toString()).toBe("mytag:nicetag:(0,*)")
+            expect(tag.toString()).toBe("mytag:nicetag:(0, *)")
         })
 
         test('should be able to create tags with varying coordinate types', () => {
@@ -36,7 +39,9 @@ describe('tags', () => {
                 newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
                 newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 0))
             )
-            const updatedTags = tags.add("my-new-tag", "nice-new-tag", RowCoordinate.of(0)).getOrThrow()
+            const updatedTags = tags
+                .add(newRowTag("my-new-tag", "nice-new-tag", RowCoordinate.of(0)))
+                .getOrThrow()
             expect(tags.length()).toBe(3)
             expect(updatedTags.length()).toBe(4)
         })
@@ -63,7 +68,7 @@ describe('tags', () => {
             newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
             newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
             newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
-            newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 0)),
+            newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
         )
 
         test('should be able to retrieve a tag by its ID', () => {
@@ -86,6 +91,12 @@ describe('tags', () => {
             expect(rowTags.length).toBe(1)
             expect(rowTags[0].name).toBe("my-row-tag-1")
         })
+
+        test("should be able to retrieve all tags for a coordinate", () => {
+            expect(tags.tagsFor(0, 4)).toHaveLength(2) // my-row-tag, my-cell-tag
+            expect(tags.tagsFor(1, 4)).toHaveLength(1) // my-row-tag
+            expect(tags.tagsFor(0, 0)).toHaveLength(2) // my-row-tag, my-column-tag
+        })
     })
 
 
@@ -106,7 +117,7 @@ describe('tags', () => {
             })
 
             test("should be able to create a new cell tag", () => {
-                const tag = newTag<string, CellCoordinate>("headers-name", "header-value", CellCoordinate.of(3, 14))
+                const tag = newTag(CellTag, "headers-name", "header-value", CellCoordinate.of(3, 14))
                 expect(tag.id).toEqual(`tag-headers-name-(3,14)`)
                 expect(tag.name).toEqual("headers-name")
                 expect(tag.value).toEqual("header-value")
@@ -124,10 +135,10 @@ describe('tags', () => {
             test("should be able to add tags to an empty Tags collection with add", () => {
                 const emptyTags = Tags.empty<string, TagCoordinate>()
                 const updatedTags = emptyTags
-                    .add("test-tag-1", "test-value-1", RowCoordinate.of(0))
-                    .flatMap(tags => tags.add("test-tag-2", "test-value-2", RowCoordinate.of(0)))
-                    .flatMap(tags => tags.add("test-tag-3", "test-value-3", RowCoordinate.of(1)))
-                    .flatMap(tags => tags.add("test-tag-3", "test-value-3", RowCoordinate.of(2)))
+                    .add(newRowTag("test-tag-1", "test-value-1", RowCoordinate.of(0)))
+                    .flatMap(tags => tags.add(newRowTag("test-tag-2", "test-value-2", RowCoordinate.of(0))))
+                    .flatMap(tags => tags.add(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(1))))
+                    .flatMap(tags => tags.add(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(2))))
                     .getOrThrow()
 
                 expect(emptyTags.length()).toBe(0)
@@ -141,10 +152,10 @@ describe('tags', () => {
             test("should be able to add tags to an empty Tags collection with addOrReplace", () => {
                 const emptyTags = Tags.empty<string, TagCoordinate>()
                 const updatedTags = emptyTags
-                    .addOrReplace("test-tag-1", "test-value-1", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-2", "test-value-2", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(1))
-                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(2))
+                    .addOrReplace(newRowTag("test-tag-1", "test-value-1", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-2", "test-value-2", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(1)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(2)))
 
                 expect(emptyTags.length()).toBe(0)
                 expect(updatedTags.length()).toBe(4)
@@ -159,7 +170,7 @@ describe('tags', () => {
                     newRowTag("existing-tag", "existing-value", RowCoordinate.of(0))
                 );
 
-                const added = tags.add("existing-tag", "new-value", RowCoordinate.of(0))
+                const added = tags.add(newRowTag("existing-tag", "new-value", RowCoordinate.of(0)))
                 expect(added.failed).toBe(true);
                 expect(tags.length()).toBe(1);
             });
@@ -169,12 +180,12 @@ describe('tags', () => {
                     newRowTag("existing-tag", "existing-value", RowCoordinate.of(0))
                 );
 
-                const added = tags.replace("existing-tag", "new-value", RowCoordinate.of(0))
-                expect(added.map(tags => tags.hasUniqueTagFor("existing-tag", RowCoordinate.of(0))).getOrThrow())
+                const result = tags.replace(newRowTag("existing-tag", "new-value", RowCoordinate.of(0)))
+                expect(result.map(tags => tags.hasUniqueTagFor("existing-tag", RowCoordinate.of(0))).getOrThrow())
                     .toBe(true)
-                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")).getOrThrow())
+                expect(result.map(tags => tags.filter(tag => tag.name === "existing-tag")).getOrThrow())
                     .toHaveLength(1)
-                expect(added.map(tags => tags.filter(tag => tag.name === "existing-tag")[0].value).getOrThrow())
+                expect(result.map(tags => tags.filter(tag => tag.name === "existing-tag")[0].value).getOrThrow())
                     .toBe("new-value")
                 expect(tags.length()).toBe(1);
             });
@@ -182,10 +193,10 @@ describe('tags', () => {
             test("should add tag when it doesn't already exist when using addOrReplace", () => {
                 // add a set of new tags
                 const tags = Tags.empty<string, TagCoordinate>()
-                    .addOrReplace("test-tag-1", "test-value-1", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-2", "test-value-2", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(1))
-                    .addOrReplace("test-tag-3", "test-value-3", RowCoordinate.of(2))
+                    .addOrReplace(newRowTag("test-tag-1", "test-value-1", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-2", "test-value-2", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(1)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(2)))
 
                 expect(tags.length()).toBe(4)
                 expect(tags.uniqueTagFor("test-tag-1", RowCoordinate.of(0)).map(tag => tag.value).getOrThrow())
@@ -199,10 +210,10 @@ describe('tags', () => {
 
                 // replace each of the tags
                 const updated = tags
-                    .addOrReplace("test-tag-1", "test-value-11", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-2", "test-value-21", RowCoordinate.of(0))
-                    .addOrReplace("test-tag-3", "test-value-31", RowCoordinate.of(1))
-                    .addOrReplace("test-tag-3", "test-value-32", RowCoordinate.of(2))
+                    .addOrReplace(newRowTag("test-tag-1", "test-value-11", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-2", "test-value-21", RowCoordinate.of(0)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-31", RowCoordinate.of(1)))
+                    .addOrReplace(newRowTag("test-tag-3", "test-value-32", RowCoordinate.of(2)))
 
                 expect(updated.length()).toBe(4)
                 expect(tags.length()).toBe(4)
@@ -237,6 +248,25 @@ describe('tags', () => {
                 expect(removeResult.failed).toBe(true);
                 expect(removeResult.failureOrUndefined()).toContain("Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: non-existent-id");
             });
+
+            test("should be able to transpose the tags", () => {
+                const tags = Tags
+                    .with<string>(
+                        newRowTag("row-tag", "value", RowCoordinate.of(0)),
+                        newColumnTag("column-tag", "value", ColumnCoordinate.of(1)),
+                        newCellTag("cell-tag", "value", CellCoordinate.of(3, 2))
+                    )
+                    .transpose()
+                expect(tags.length()).toBe(3)
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(2, 3))).toBeTruthy()
+                expect(tags.hasTagFor("cell-tag", CellCoordinate.of(3, 2))).toBeFalsy()
+
+                expect(tags.hasTagFor("row-tag", ColumnCoordinate.of(0))).toBeTruthy()
+                expect(tags.hasTagFor("row-tag", RowCoordinate.of(0))).toBeFalsy()
+
+                expect(tags.hasTagFor("column-tag", RowCoordinate.of(1))).toBeTruthy()
+                expect(tags.hasTagFor("column-tag", ColumnCoordinate.of(1))).toBeFalsy()
+            })
 
             test("should correctly identify if a tag exists with hasTagFor", () => {
                 const tags = Tags.with<string>(

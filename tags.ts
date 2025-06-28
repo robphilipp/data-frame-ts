@@ -1,10 +1,19 @@
 import {failureResult, Result, successResult} from "result-fn";
 
 /**
- * Represents a coordinate in a data frame.
+ * Represents a coordinate in a data frame to which the tag applies.
  * A coordinate can be a row, column, or cell coordinate.
  */
 export interface TagCoordinate {
+    /**
+     * @return The coordinate of the tag as a named tuple. When
+     * one of the coordinates is not defined, for example, the column
+     * coordinate of a {@link RowCoordinate}, or the row coordinate
+     * of a {@link ColumnCoordinate}, then that coordinate value is
+     * `NaN`.
+     */
+    coordinate: () => [row: number, column: number]
+
     /**
      * Determines whether this coordinate equals another coordinate.
      * @param other The other coordinate to compare with
@@ -37,79 +46,212 @@ export interface TagValue {
  * @template V The type of the tag's value
  * @template C The type of the tag's coordinate
  */
-export type Tag<V extends TagValue, C extends TagCoordinate> = {
+export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
     /**
      * The unique identifier of the tag
      */
     readonly id: string
 
     /**
-     * The name of the tag
+     * Constructor for a base tag
+     * @param name The name of the tag
+     * @param value The value associated with the tag
+     * @param coordinate The coordinate (in the data-frame) to which the tag applies
+     * @protected
      */
-    readonly name: string
+    protected constructor(readonly name: string, readonly value: V, readonly coordinate: C) {
+        this.id = `tag-${name}-${coordinate.toString().replace(/ /g, "")}`
+    }
 
     /**
-     * The value associated with the tag
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
      */
-    readonly value: V
+    getCoordinate(): C {
+        return this.coordinate
+    }
 
     /**
-     * The coordinate where the tag is located
+     * Compares this {@link Tag} instance with another {@link Tag} instance for equality.
+     * Two {@link Tag} object are considered equal if their `name`, `value`, and `coordinate`
+     * are equal.
+     *
+     * @param other - The Tag instance to compare with.
+     * @return `true` if both {@link Tag} instances are equal, `false` otherwise.
      */
-    readonly coordinate: C
-
-    // meetsCondition: (predicate: TagPredicate<V, C>) => boolean
+    equals(other: Tag<V, C>): boolean {
+        return this.name === other.name && this.value.toString() === other.value.toString() && this.coordinate.equals(other.coordinate)
+    }
 
     /**
      * Returns a string representation of this tag
      * @return A string representation of the tag
      */
-    toString: () => string
-
-    // meetsCondition: (predicate: (value: TagValue) => boolean) => TagValue | undefined
-    // map: <T>(transform: (value: TagValue) => T) => T
-    // equals: (other: TagValue) => boolean
+    toString(): string {
+        return `${this.name}:${this.value.toString()}:${this.coordinate.toString()}`
+    }
 }
+
+/**
+ * Defines the available {@link Tag} types that are available. This is used for determining the
+ * type of individual tags.
+ * <p>
+ * **Note** that when adding a new {@link Tag} type, add that tag type to this list
+ */
+export type AvailableTagTypes<V extends TagValue, C extends TagCoordinate> = RowTag<V> | ColumnTag<V> | CellTag<V> | Tag<V, C>
 
 /**
  * Represents a tag associated with a row in a data frame.
  * @template T The type of the tag's value
  */
-export type RowTag<T extends TagValue> = Tag<T, RowCoordinate>
+export class RowTag<T extends TagValue> extends Tag<T, RowCoordinate> {
+    /**
+     * Constructor for a row tag
+     * @param name The name of the tag
+     * @param value The value associated with the tag
+     * @param coordinate The coordinate (in the data-frame) to which the tag applies
+     * @protected
+     */
+    constructor(readonly name: string, readonly value: T, readonly coordinate: RowCoordinate) {
+        super(name, value, coordinate)
+    }
+
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
+    isRowTag(): this is RowTag<T> {
+        return true
+    }
+
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
+    getCoordinate(): RowCoordinate {
+        return super.getCoordinate();
+    }
+}
+
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link RowTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link RowTag}; `false` otherwise
+ */
+export function isRowTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is RowTag<V> {
+    return (tag as RowTag<V>).isRowTag !== undefined
+}
 
 /**
  * Represents a tag associated with a column in a data frame.
  * @template T The type of the tag's value
  */
-export type ColumnTag<T extends TagValue> = Tag<T, ColumnCoordinate>
+export class ColumnTag<T extends TagValue> extends Tag<T, ColumnCoordinate> {
+    /**
+     * Constructor for a column tag
+     * @param name The name of the tag
+     * @param value The value associated with the tag
+     * @param coordinate The coordinate (in the data-frame) to which the tag applies
+     * @protected
+     */
+    constructor(readonly name: string, readonly value: T, readonly coordinate: ColumnCoordinate) {
+        super(name, value, coordinate)
+    }
+
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
+    isColumnTag(): this is ColumnTag<T> {
+        return true
+    }
+
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
+    getCoordinate(): ColumnCoordinate {
+        return super.getCoordinate();
+    }
+}
+
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link ColumnTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link ColumnTag}; `false` otherwise
+ */
+export function isColumnTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is ColumnTag<V> {
+    return (tag as ColumnTag<V>).isColumnTag !== undefined
+}
+
 
 /**
  * Represents a tag associated with a cell in a data frame.
  * @template T The type of the tag's value
  */
-export type CellTag<T extends TagValue> = Tag<T, CellCoordinate>
+export class CellTag<T extends TagValue> extends Tag<T, CellCoordinate> {
+    /**
+     * Constructor for a cell tag
+     * @param name The name of the tag
+     * @param value The value associated with the tag
+     * @param coordinate The coordinate (in the data-frame) to which the tag applies
+     * @protected
+     */
+    constructor(readonly name: string, readonly value: T, readonly coordinate: CellCoordinate) {
+        super(name, value, coordinate)
+    }
+
+    /**
+     * Method used to narrow {@link Tag} objects to determine their type
+     * @return `true`
+     */
+    isCellTag(): this is CellTag<T> {
+        return true
+    }
+
+    /**
+     * Retrieves the coordinate value (in the data-frame) to which the tag applies
+     * @return The coordinate to which the tag applies.
+     */
+    getCoordinate(): CellCoordinate {
+        return super.getCoordinate();
+    }
+}
+
+/**
+ * Given a tag that is one of the {@link AvailableTagTypes}, determines whether the tag is a {@link CellTag}
+ * @param tag An tag that is one of the {@link AvailableTagTypes}
+ * @return `true` if the tag is a {@link CellTag}; `false` otherwise
+ */
+export function isCellTag<V extends TagValue>(tag: AvailableTagTypes<V, TagCoordinate>): tag is CellTag<V> {
+    return (tag as CellTag<V>).isCellTag !== undefined
+}
 
 /**
  * Creates a new tag with the specified name, value, and coordinate.
+ * @param tag A constructor object for a tag
  * @param name The tag's name
  * @param value The tag's value
  * @param coordinate The tag's coordinate
  * @return A new tag with the specified properties
+ * @example
+ * ```typescript
+ * // create a new RowTag using the tag function (there is also a newRowTag function)
+ * const tag: RowTag<string> = newTag(RowTag, "mytag", "nicetag", RowCoordinate.of(0))
+ * expect(tag.id).toBe("tag-mytag-(0,*)")
+ * expect(tag.name).toBe("mytag")
+ * expect(tag.value).toBe("nicetag")
+ * expect(tag.coordinate).toEqual(RowCoordinate.of(0))
+ * expect(tag.toString()).toBe("mytag:nicetag:(0, *)")
+ * ```
  */
-export function newTag<V extends TagValue, C extends TagCoordinate>(
+export function newTag<V extends TagValue, C extends TagCoordinate, T extends Tag<V, C>>(
+    tag: new (name: string, value: V, coordinate: C) => T,
     name: string,
     value: V,
     coordinate: C
-): Tag<V, C> {
-
-    return {
-        id: `tag-${name}-${coordinate.toString().replace(/ /g, "")}`,
-        name,
-        value,
-        coordinate,
-        // meetsCondition: predicate => predicate(name, value, coordinate),
-        toString: () => `${name}:${value.toString()}:${coordinate.toString().replace(/ /g, "")}`
-    }
+): T {
+    return new tag(name, value, coordinate)
 }
 
 /**
@@ -120,7 +262,7 @@ export function newTag<V extends TagValue, C extends TagCoordinate>(
  * @return A new row tag with the specified properties
  */
 export function newRowTag<T extends TagValue>(name: string, value: T, coordinate: RowCoordinate): RowTag<T> {
-    return newTag<T, RowCoordinate>(name, value, coordinate)
+    return newTag<T, RowCoordinate, RowTag<T>>(RowTag<T>, name, value, coordinate)
 }
 
 /**
@@ -131,7 +273,7 @@ export function newRowTag<T extends TagValue>(name: string, value: T, coordinate
  * @return A new column tag with the specified properties
  */
 export function newColumnTag<T extends TagValue>(name: string, value: T, coordinate: ColumnCoordinate): ColumnTag<T> {
-    return newTag<T, ColumnCoordinate>(name, value, coordinate)
+    return newTag<T, ColumnCoordinate, ColumnTag<T>>(ColumnTag<T>, name, value, coordinate)
 }
 
 /**
@@ -142,7 +284,7 @@ export function newColumnTag<T extends TagValue>(name: string, value: T, coordin
  * @return A new cell tag with the specified properties
  */
 export function newCellTag<T extends TagValue>(name: string, value: T, coordinate: CellCoordinate): CellTag<T> {
-    return newTag<T, CellCoordinate>(name, value, coordinate)
+    return newTag<T, CellCoordinate, CellTag<T>>(CellTag<T>, name, value, coordinate)
 }
 
 /**
@@ -195,8 +337,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @return A copy of this {@link Tags} object.
      */
     private copy(): Tags<T, C> {
-        const tags: Array<Tag<T, C>> = this.tags.slice()
-        return new Tags<T, C>(tags)
+        return new Tags<T, C>(this.tags.slice())
     }
 
     /**
@@ -239,28 +380,26 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * If the tag is added successfully, then returns a {@link Result} holding the updated {@link Tags} object.
      * If the tag could not be added, then returns a failure result with a message indicating the reason for the failure.
      *
-     * @param name The tag's name
-     * @param value The tag's value
-     * @param coordinate The tag's coordinate
+     * @param tag The tag to add
      * @return The a {@link Result} holding the updated {@link Tags} object or a failure message if the tag could not be added.
      * @see replace
      * @see addOrReplace
      *
      * @example
      * ```typescript
-     * const result = Tags.empty<number, CellCoordinate>().add("name", 314, CellCoordinate.of(0, 0))
+     * const result = Tags.empty<number, CellCoordinate>().add(newCellTag("name", 314, CellCoordinate.of(0, 0)))
      * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
      * ```
      */
-    public add(name: string, value: T, coordinate: C): Result<Tags<T, C>, string> {
+    public add(tag: Tag<T, C>): Result<Tags<T, C>, string> {
         const tagsObject: Tags<T, C> = this.copy()
-        if (this.hasTagFor(name, coordinate)) {
+        if (this.hasTagFor(tag.name, tag.coordinate)) {
             return failureResult(
                 `(Tags::add) Cannot add tag because a tag with the same name and coordinate already exists; ` +
-                `name: ${name}, coordinate: ${coordinate.toString()}`
+                `name: ${tag.name}, coordinate: ${tag.coordinate.toString()}`
             )
         }
-        tagsObject.tags.push(newTag(name, value, coordinate))
+        tagsObject.tags.push(tag)
         return successResult(tagsObject)
     }
 
@@ -273,28 +412,29 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * If no tag with the same name and coordinate exists, then returns a failure result with a message
      * indicating the reason for the failure.
      *
-     * @param name The tag's name
-     * @param value The tag's value
-     * @param coordinate The tag's coordinate
+     * @param tag The tag to replace
      * @return The a {@link Result} holding the updated {@link Tags} object or a failure message if the tag could not be replaced.
      * @see add
      * @see addOrReplace
      *
      * @example
      * ```typescript
-     * let result = Tags.empty<number, CellCoordinate>().add("name", 314, CellCoordinate.of(0, 0))
-     * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
+     * // create a tags object with one tag
+     * const tags = Tags.with<string>(newRowTag("existing-tag", "existing-value", RowCoordinate.of(0)));
      *
-     * result = Tags.empty<number, CellCoordinate>().replace("name", 314159, CellCoordinate.of(0, 0))
-     * expect(result.map(tags => tags.hasUniqueTagFor("name", CellCoordinate.of(0, 0)))).toBe(true)
-     * expect(result.map(tags => tags.uniqueTagFor("name", CellCoordinate.of(0, 0)).map(tag => tag.value).getOrDefault(0))).toBe(314159)
+     * // replace the existing-tag with a new one
+     * const result = tags.replace(newRowTag("existing-tag", "new-value", RowCoordinate.of(0)))
      *
-     * result = Tags.empty<number, CellCoordinate>().replace("no-name", 314, CellCoordinate.of(0, 0))
-     * expect(result.failed).toBe(true)
+     * // there should still only be one tag, and it should have a new-value
+     * expect(tags.length()).toBe(1);
+     * expect(result.map(tags => tags.hasUniqueTagFor("existing-tag", RowCoordinate.of(0))).getOrThrow()).toBe(true)
+     * expect(result.map(tags => tags.filter(tag => tag.name === "existing-tag")).getOrThrow()).toHaveLength(1)
+     * expect(result.map(tags => tags.filter(tag => tag.name === "existing-tag")[0].value).getOrThrow()).toBe("new-value")
      * ```
      */
-    public replace(name: string, value: T, coordinate: C): Result<Tags<T, C>, string> {
+    public replace(tag: Tag<T, C>): Result<Tags<T, C>, string> {
         const tagsObject: Tags<T, C> = this.copy()
+        const {name, coordinate} = tag
         if (!this.hasUniqueTagFor(name, coordinate)) {
             return failureResult(
                 `(Tags::replace) Cannot replace tag because no unique tag with name and coordinate was found; ` +
@@ -302,7 +442,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
             )
         }
         const index = tagsObject.tags.findIndex(tag => tag.name === name && tag.coordinate.equals(coordinate))
-        tagsObject.tags[index] = newTag(name, value, coordinate)
+        tagsObject.tags[index] = tag
         return successResult(tagsObject)
     }
 
@@ -312,18 +452,24 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      *
      * This is a convenience function in cases where the more string {@link add} and {@link replace} methods are not
      * necessary.
-     * @param name The tag's name
-     * @param value The tag's value
-     * @param coordinate The tag's coordinate
+     * @param tag The tag to add if it doesn't already exist, or to replace if it does exist
      * @return An updated copy of the {@link Tags} object.
      * @see add
      * @see replace
+     * @example
+     * ```typescript
+     * const tags = Tags.empty<string, TagCoordinate>()
+     *     .addOrReplace(newRowTag("test-tag-1", "test-value-1", RowCoordinate.of(0)))
+     *     .addOrReplace(newRowTag("test-tag-2", "test-value-2", RowCoordinate.of(0)))
+     *     .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(1)))
+     *     .addOrReplace(newRowTag("test-tag-3", "test-value-3", RowCoordinate.of(2)))
+     * ```
      */
-    public addOrReplace(name: string, value: T, coordinate: C): Tags<T, C> {
-        if (this.hasTagFor(name, coordinate)) {
-            return this.replace(name, value, coordinate).getOrElse(this.copy())
+    public addOrReplace(tag: Tag<T, C>): Tags<T, C> {
+        if (this.hasTagFor(tag.name, tag.coordinate)) {
+            return this.replace(tag).getOrElse(this.copy())
         }
-        return this.add(name, value, coordinate).getOrElse(this.copy())
+        return this.add(tag).getOrElse(this.copy())
     }
 
     /**
@@ -332,6 +478,16 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @param id The ID of the tag to remove
      * @return A {@link Result} whose success value is a new {@link Tags} object with the
      * tag removed. When the specified ID is not found, then returns a failure.
+     * @example
+     * ```typescript
+     * const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
+     * const tags = Tags.with<string>(tag);
+     *
+     * const removeResult = tags.remove(tag.id);
+     *
+     * expect(removeResult.succeeded).toBe(true);
+     * expect(removeResult.map(tags => tags.length()).getOrElse(-1)).toBe(0);
+     * ```
      */
     public remove(id: string): Result<Tags<T, C>, string> {
         const index = this.tags.findIndex(tag => tag.id === id)
@@ -344,6 +500,64 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
         return failureResult(
             `(Tags::remove) Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: ${id}`
         )
+    }
+
+    /**
+     * Transposes all the tags in the Tags object and returns a new Tags object with the new tags.
+     * Transposing a tag mean that it transposes the coordinates. Cell-tags simple have their row-index
+     * swapped with their column-index. Row-tags get converted to column-tags. And column-tags get
+     * converted to row-tags.
+     * @return a new Tags object with all the tags transposed.
+     */
+    public transpose(): Tags<T, C> {
+        const tags = this.tags.map(tag => {
+            const [row, column] = tag.coordinate.coordinate() as [number, number]
+            if (isCellTag(tag)) {
+                return newCellTag(tag.name, tag.value, CellCoordinate.of(column, row))
+            }
+            if (isRowTag(tag)) {
+                return newColumnTag(tag.name, tag.value, ColumnCoordinate.of(row))
+            }
+            if (isColumnTag(tag)) {
+                return newRowTag(tag.name, tag.value, RowCoordinate.of(column))
+            }
+            return tag
+        }) as Array<Tag<T, C>>
+        return new Tags<T, C>(tags)
+    }
+
+    /**
+     * Returns an array of {@link Tag} objects that are associated with a coordinate
+     * @param rowIndex The row index
+     * @param columnIndex The column index
+     * @return An array of {@link Tag} objects that are associated with a coordinate
+     * @example
+     * ```typescript
+     * const tags = Tags.with<string>(
+     *     newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+     *     newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+     *     newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+     *     newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+     * )
+     * expect(tags.tagsFor(0, 4)).toHaveLength(2) // my-row-tag, my-cell-tag
+     * expect(tags.tagsFor(1, 4)).toHaveLength(1) // my-row-tag
+     * expect(tags.tagsFor(0, 0)).toHaveLength(2) // my-row-tag, my-column-tag
+     * ```
+     */
+    public tagsFor(rowIndex: number, columnIndex: number): Array<Tag<T, C>> {
+        return this.tags.filter(tag => {
+            const [c1, c2] = tag.coordinate.coordinate() as [number, number]
+            if (tag.coordinate instanceof RowCoordinate && isNaN(c2)) {
+                return c1 === rowIndex
+            }
+            if (tag.coordinate instanceof ColumnCoordinate && isNaN(c1)) {
+                return c2 === columnIndex
+            }
+            if (tag.coordinate instanceof CellCoordinate) {
+                return c1 === rowIndex && c2 === columnIndex
+            }
+            return false
+        })
     }
 
     /**
@@ -362,7 +576,7 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
      * @param name The tag's name
      * @param coordinate The tag's coordinate
      * @return `true` if there is exactly one tag that matches the specified name and coordinate.
-     * If there are no matches, or more tha one match, then returns `false`.
+     * If there are no matches, or more than one match, then returns `false`.
      */
     public hasUniqueTagFor(name: string, coordinate: C): boolean {
         return this.tags.filter(tag => tag.name === name && tag.coordinate.equals(coordinate)).length === 1
@@ -421,6 +635,10 @@ export class RowCoordinate implements TagCoordinate {
     private constructor(private readonly row: number) {
     }
 
+    coordinate(): [row: number, column: number] {
+        return [this.row, NaN]
+    }
+
     /**
      * Creates a new RowCoordinate with the specified row index.
      * @param row The row index
@@ -456,6 +674,10 @@ export class RowCoordinate implements TagCoordinate {
  */
 export class ColumnCoordinate implements TagCoordinate {
     private constructor(private readonly column: number) {
+    }
+
+    coordinate(): [row: number, column: number] {
+        return [NaN, this.column]
     }
 
     /**
@@ -494,6 +716,10 @@ export class ColumnCoordinate implements TagCoordinate {
 export class CellCoordinate implements TagCoordinate {
 
     private constructor(private readonly row: number, private readonly column: number) {
+    }
+
+    coordinate(): [row: number, column: number] {
+        return [this.row, this.column]
     }
 
     /**

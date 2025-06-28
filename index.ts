@@ -1,4 +1,7 @@
-export {DataFrame} from './DataFrame';
+export {
+    DataFrame,
+    CellValue
+} from './DataFrame';
 export type {
     TagCoordinate,
     Tag,
