@@ -328,6 +328,16 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     }
 
     /**
+     * Compares this {@link Tags} object with the "other" {@link Tags} object
+     * @param other The other tags to compare to this one
+     * @return `true` if the other {@link Tags} object equals this one; `false` otherwise
+     */
+    public equals(other: Tags<T, C>): boolean {
+        return this.tags.length === other.tags.length &&
+            this.tags.every((tag, index) => tag.equals(other.tags[index]))
+    }
+
+    /**
      * Creates an empty {@link Tags} object.
      * @return An empty {@link Tags} object.
      */

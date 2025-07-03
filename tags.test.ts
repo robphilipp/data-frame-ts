@@ -61,7 +61,69 @@ describe('tags', () => {
             expect(result.succeeded).toBe(true)
             expect(result.map(tag => tag.value).getOrThrow()).toBe("value2")
         });
+    })
 
+    describe("comparing tags", () => {
+        const tags = Tags.with<string>(
+            newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+            newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+            newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+            newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+        )
+
+        test("a tags object should equals itself", () => {
+            expect(tags.equals(tags)).toBe(true)
+        })
+
+        test("a copy of a tags object should equals the original", () => {
+            expect(tags.equals(tags.copy())).toBe(true)
+        })
+
+        test('two equal tags should be equal', () => {
+            const otherTags = Tags.with<string>(
+                newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+                newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+                newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+                newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+            )
+            expect(tags.equals(otherTags)).toBe(true)
+        })
+
+        test('two tags that differ in the value of a single tag should not be equal', () => {
+            const otherTags = Tags.with<string>(
+                newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+                newRowTag("my-row-tag-1", "NICE-ROW-TAG-10", RowCoordinate.of(1)),
+                newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+                newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+            )
+            expect(tags.equals(otherTags)).toBe(false)
+        })
+
+        test('two tags that differ in the number of tags should not be equal', () => {
+            const otherTags = Tags.with<string>(
+                newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+                newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+                newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+            )
+            expect(tags.equals(otherTags)).toBe(false)
+        })
+
+        test('two equal tags should be equal, but updating one should change that', () => {
+            const otherTags = Tags.with<string>(
+                newRowTag("my-row-tag", "nice-row-tag", RowCoordinate.of(0)),
+                newRowTag("my-row-tag-1", "nice-row-tag-1", RowCoordinate.of(1)),
+                newColumnTag("my-column-tag", "nice-column-tag", ColumnCoordinate.of(0)),
+                newCellTag("my-cell-tag", "nice-cell-tag", CellCoordinate.of(0, 4)),
+            )
+            expect(tags.equals(otherTags)).toBe(true)
+
+            const updatedTags = otherTags.add(
+                newCellTag("my-cell-tag", "NICE-CELL-TAG", CellCoordinate.of(1, 4))
+            ).getOrThrow()
+            expect(tags.equals(otherTags)).toBe(true)
+            expect(updatedTags.equals(otherTags)).toBe(false)
+
+        })
     })
 
     describe('querying tags', () => {

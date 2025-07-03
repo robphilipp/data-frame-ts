@@ -231,9 +231,12 @@ export class DataFrame<V> {
     }
 
     /**
-     * Compares the current DataFrame instance with another DataFrame instance for equality.
+     * Compares the current DataFrame instance with another DataFrame instance for equality. By default,
+     * the two data-frames are equal if they have the same data, regardless of how the data-frame is
+     * tagged. To include tags in the comparison, set the optional {@link compareTags} argument to `true`.
      *
      * @param other The DataFrame instance to compare with the current instance.
+     * @param [compareTags=false] Whether the equality check includes the tags
      * @return A boolean indicating whether the two DataFrame instances are equal. Returns true if both have the
      * same length and identical data, otherwise false.
      *
@@ -255,8 +258,10 @@ export class DataFrame<V> {
      * })
      * ```
      */
-    public equals(other: DataFrame<V>): boolean {
-        return this.data.length === other.data.length && this.data.every((value, index) => value === other.data[index])
+    public equals(other: DataFrame<V>, compareTags: boolean = false): boolean {
+        return this.data.length === other.data.length &&
+            this.data.every((value, index) => value === other.data[index]) &&
+            (!compareTags || this.tags === other.tags)
     }
 
     /**
@@ -1186,8 +1191,8 @@ export class DataFrame<V> {
                 tag_value: ${tag.toString()}; valid_index_range: (0, ${this.numRows - 1}).`
             )
         }
-        this.tags = this.tags.addOrReplace(newRowTag(name, tag, RowCoordinate.of(rowIndex)))
-        return successResult(this as DataFrame<V>)
+        const tags = this.tags.addOrReplace(newRowTag(name, tag, RowCoordinate.of(rowIndex)))
+        return successResult(new DataFrame(this.data.slice(), this.numRows, this.numColumns, tags))
     }
 
     /**
@@ -1222,8 +1227,8 @@ export class DataFrame<V> {
                 tag_value: ${tag.toString()}; valid_index_range: (0, ${this.numColumns - 1}).`
             )
         }
-        this.tags = this.tags.addOrReplace(newColumnTag(name, tag, ColumnCoordinate.of(columnIndex)))
-        return successResult(this as DataFrame<V>)
+        const tags = this.tags.addOrReplace(newColumnTag(name, tag, ColumnCoordinate.of(columnIndex)))
+        return successResult(new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags))
     }
 
     /**
@@ -1264,8 +1269,8 @@ export class DataFrame<V> {
                 `(DataFrame::tagCell) Column index for cell tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; `
             )
         }
-        this.tags = this.tags.addOrReplace(newCellTag(name, tag, CellCoordinate.of(rowIndex, columnIndex)))
-        return successResult(this as DataFrame<V>)
+        const tags = this.tags.addOrReplace(newCellTag(name, tag, CellCoordinate.of(rowIndex, columnIndex)))
+        return successResult(new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags))
     }
 
     /**

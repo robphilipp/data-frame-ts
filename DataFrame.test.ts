@@ -6,10 +6,14 @@ import {
     ColumnTag,
     isCellTag,
     isColumnTag,
-    isRowTag, newCellTag, newColumnTag,
+    isRowTag,
+    newCellTag,
+    newColumnTag,
     newRowTag,
     RowCoordinate,
-    RowTag, Tag, Tags, TagValue
+    RowTag,
+    Tag,
+    TagValue
 } from "./tags";
 
 describe("Testing data-frame behavior", () => {
@@ -692,11 +696,14 @@ describe("Testing data-frame behavior", () => {
 
     describe("Testing tagging functionality", () => {
         test("should be able to tag a row", () => {
-            const taggedDataFrame = DataFrame.from([
+            const dataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
-            ]).flatMap(df => df.tagRow(1, "row-tag", "row-value"))
+            ]).getOrThrow()
+
+            const taggedDataFrame = dataFrame
+                .tagRow(1, "row-tag", "row-value")
                 .getOrThrow()
 
             // Verify the result is a DataFrame
@@ -705,6 +712,15 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.columnCount()).toBe(3)
             expect(taggedDataFrame.hasRowTagFor(1)).toBeTruthy()
             expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
+
+            // the taggedDataFrame is a new object, and so its reference should differ from
+            // the dataFrame's reference
+            expect(taggedDataFrame === dataFrame).toBeFalsy()
+            // but the data in the taggedDataFrame is the same as the data in the dataFrame
+            expect(taggedDataFrame.equals(dataFrame)).toBeTruthy()
+            // though, when comparing the dataFrame and taggedDataFrame including the tags,
+            // then the two differ because the dataFrame has no tags
+            expect(taggedDataFrame.equals(dataFrame, true)).toBeFalsy()
         })
 
         test("should transpose tags with dataframe is transposed", () => {
