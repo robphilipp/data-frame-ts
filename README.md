@@ -307,7 +307,7 @@ The `DataFrame` class supports tagging rows, columns, and cells. AI calls this a
 
 [(toc)](#table-of-contents)
 
-Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows for flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
+Tags can be used to store metadata about the DataFrame's structure, such as column headers, row labels, or cell-specific information. The tagging system allows flexible annotation of data and can be used for filtering, highlighting, or providing additional context to your data.
 
 The `DataFrame` class supports tagging rows, columns, and cells with metadata. Tags are name-value pairs associated with specific coordinates in the `DataFrame`. 
 
@@ -322,7 +322,7 @@ Tagging elements in a `DataFrame` is achieved by using the `tagRow(...)`, `tagCo
 
 A row, column, and cell can be tagged with any data type that implements the `TagValue` interface. Essentially, the data type must implement a `toString()` method. Not a high bar.
 
-There is an **important** difference between modifying data in a data-frame, and adding tags. Recall that (except for the "in-place" methods) when modifying data in a data-frame, the original data-frame is unmodified. Instead of modifying the original data-frame, a modified copy is returned. Togging is different. When using tagging operations, the original data-frame is modified and returned. The difference is that tagging updates metadata describing aspects of the data-frame rather than the data in the data-frame. 
+A `DataFrame` is generally immutable. However, there may be times when modifying the data-frame in-place is required. This is true for tagging data as well. By default, adding tags will leave the original `DataFrame` unchanged, and instead return an updated version with the new tags. Each of the tagging functions has an optional argument `modifyInPlace` (that defaults to `false`) that when set to `true` will modify the original `DataFrame` and return it. This is not the idiomatic use of the tagging functions. But it is available as an escape hatch.
 
 ```typescript
 const dataFrame = DataFrame.from([
@@ -344,7 +344,8 @@ dataFrame.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}).getOrThrow
 // Chain multiple tag operations
 const taggedDataFrame = dataFrame.tagRow(0, "category", "header")
         .flatMap(df => df.tagColumn(1, "dataType", "numeric"))
-        .flatMap(df => df.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}))
+        // modify the data-frame in place by setting the "modifyInPlace argument to "true"
+        .flatMap(df => df.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}, true))
         .getOrThrow()
 
 // taggedDataFrame and the original dataFrame are the same object

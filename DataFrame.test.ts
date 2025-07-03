@@ -723,6 +723,29 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.equals(dataFrame, true)).toBeFalsy()
         })
 
+        test("should not remove a row tag when the coordinate is wrong", () => {
+            const dataFrame = DataFrame
+                .from([
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9],
+                    [10, 11, 12],
+                ])
+                .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                .getOrThrow()
+
+            const updatedDataFrame = dataFrame.removeRowTag(1, "row-tag")
+            expect(updatedDataFrame.failed).toBeTruthy()
+            expect(updatedDataFrame.error).toEqual("(Tags::remove) Unable to remove tag with specified tag ID because no tag with this ID was found; tag_id: tag-row-tag-(1,*)")
+
+            // original should be unharmed
+            expect(dataFrame.hasRowTagFor(0)).toBeTruthy()
+            expect(dataFrame.hasColumnTagFor(1)).toBeTruthy()
+            expect(dataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+        })
+
         test("should transpose tags with dataframe is transposed", () => {
             const dataFrame = DataFrame
                 .from([
@@ -942,6 +965,68 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.hasTagFor(2, 2)).toBe(true)
             expect(taggedDataFrame.hasColumnTagFor(1)).toBe(true)
             expect(taggedDataFrame.hasRowTagFor(0)).toBe(true)
+        })
+
+        describe("Removing tags", () => {
+            test("should be able to remove a row tag", () => {
+                const dataFrame = DataFrame
+                    .from([
+                        [1, 2, 3],
+                        [4, 5, 6],
+                        [7, 8, 9],
+                        [10, 11, 12],
+                    ])
+                    .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                    .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                    .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                    .getOrThrow()
+
+                const updatedDataFrame = dataFrame.removeRowTag(0, "row-tag").getOrThrow()
+                expect(updatedDataFrame.hasRowTagFor(0)).toBeFalsy()
+                expect(dataFrame.hasRowTagFor(0)).toBeTruthy()
+                expect(updatedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+                expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+            })
+
+            test("should be able to remove a column tag", () => {
+                const dataFrame = DataFrame
+                    .from([
+                        [1, 2, 3],
+                        [4, 5, 6],
+                        [7, 8, 9],
+                        [10, 11, 12],
+                    ])
+                    .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                    .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                    .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                    .getOrThrow()
+
+                const updatedDataFrame = dataFrame.removeColumnTag(1, "column-tag").getOrThrow()
+                expect(updatedDataFrame.hasRowTagFor(0)).toBeTruthy()
+                expect(updatedDataFrame.hasColumnTagFor(1)).toBeFalsy()
+                expect(dataFrame.hasColumnTagFor(1)).toBeTruthy()
+                expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+            })
+
+            test("should be able to remove a cell tag", () => {
+                const dataFrame = DataFrame
+                    .from([
+                        [1, 2, 3],
+                        [4, 5, 6],
+                        [7, 8, 9],
+                        [10, 11, 12],
+                    ])
+                    .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+                    .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+                    .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+                    .getOrThrow()
+
+                const updatedDataFrame = dataFrame.removeCellTag(3, 2, "cell-tag").getOrThrow()
+                expect(updatedDataFrame.hasRowTagFor(0)).toBeTruthy()
+                expect(updatedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+                expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeFalsy()
+                expect(dataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+            })
         })
 
         describe("Retrieving cells based on tags", () => {

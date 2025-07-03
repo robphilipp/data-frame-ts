@@ -8,6 +8,7 @@ import {
     RowCoordinate, RowTag,
     Tag,
     TagCoordinate,
+    tagIdFor,
     Tags,
     TagValue
 } from "./tags";
@@ -1163,6 +1164,9 @@ export class DataFrame<V> {
      * @param rowIndex The index of the row to tag. Must be within the range [0, numRows).
      * @param name The name of the tag to associate with the row.
      * @param tag The value of the tag to associate with the row.
+     * @param [modifyInPlace = default] When set to `true`, then modifies the original data-frame in-place; when
+     * set to `false` (default behavior) does not modify the original data-frame, but rather returns a new
+     * data-frame object with the added tag
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the row index is valid,
      * or a failure result containing an error message if the row index is invalid.
@@ -1184,7 +1188,12 @@ export class DataFrame<V> {
      * expect(taggedDataFrame.hasRowTagFor(2)).toBeFalsy()
      * ```
      */
-    public tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
+    public tagRow<T extends TagValue>(
+        rowIndex: number,
+        name: string,
+        tag: T,
+        modifyInPlace:  boolean = false
+    ): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
             return failureResult(
                 `(DataFrame::tagRow) Row index for row tag is out of bounds; row_index: ${rowIndex}; tag_name: ${name}; 
@@ -1192,6 +1201,10 @@ export class DataFrame<V> {
             )
         }
         const tags = this.tags.addOrReplace(newRowTag(name, tag, RowCoordinate.of(rowIndex)))
+        if (modifyInPlace) {
+            this.tags = tags
+            return successResult(this)
+        }
         return successResult(new DataFrame(this.data.slice(), this.numRows, this.numColumns, tags))
     }
 
@@ -1201,6 +1214,9 @@ export class DataFrame<V> {
      * @param columnIndex The index of the column to tag. Must be within the range [0, numColumns).
      * @param name The name of the tag to associate with the column.
      * @param tag The value of the tag to associate with the column.
+     * @param [modifyInPlace = default] When set to `true`, then modifies the original data-frame in-place; when
+     * set to `false` (default behavior) does not modify the original data-frame, but rather returns a new
+     * data-frame object with the added tag
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the column index is valid,
      * or a failure result containing an error message if the column index is invalid.
@@ -1220,7 +1236,12 @@ export class DataFrame<V> {
      * expect(taggedDataFrame.columnCount()).toBe(3)
      * ```
      */
-    public tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
+    public tagColumn<T extends TagValue>(
+        columnIndex: number,
+        name: string,
+        tag: T,
+        modifyInPlace:  boolean = false
+    ): Result<DataFrame<V>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
             return failureResult(
                 `(DataFrame::tagColumn) Column index for column tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; 
@@ -1228,6 +1249,10 @@ export class DataFrame<V> {
             )
         }
         const tags = this.tags.addOrReplace(newColumnTag(name, tag, ColumnCoordinate.of(columnIndex)))
+        if (modifyInPlace) {
+            this.tags = tags
+            return successResult(this)
+        }
         return successResult(new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags))
     }
 
@@ -1238,6 +1263,9 @@ export class DataFrame<V> {
      * @param columnIndex The index of the column containing the cell to tag. Must be within the range [0, numColumns).
      * @param name The name of the tag to associate with the cell.
      * @param tag The value of the tag to associate with the cell.
+     * @param [modifyInPlace = default] When set to `true`, then modifies the original data-frame in-place; when
+     * set to `false` (default behavior) does not modify the original data-frame, but rather returns a new
+     * data-frame object with the added tag
      * @template T The type of the tag value, which must extend TagValue.
      * @return A success result containing the updated DataFrame if the indices are valid,
      * or a failure result containing an error message if either index is invalid.
@@ -1257,7 +1285,13 @@ export class DataFrame<V> {
      * expect(taggedDataFrame.columnCount()).toBe(3)
      * ```
      */
-    public tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string> {
+    public tagCell<T extends TagValue>(
+        rowIndex: number,
+        columnIndex: number,
+        name: string,
+        tag: T,
+        modifyInPlace:  boolean = false
+    ): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
             return failureResult(
                 `(DataFrame::tagCell) Row index for cell tag is out of bounds; row_index: ${rowIndex}; tag_name: ${name}; 
@@ -1269,8 +1303,197 @@ export class DataFrame<V> {
                 `(DataFrame::tagCell) Column index for cell tag is out of bounds; column_index: ${columnIndex}; tag_name: ${name}; `
             )
         }
+
         const tags = this.tags.addOrReplace(newCellTag(name, tag, CellCoordinate.of(rowIndex, columnIndex)))
+        if (modifyInPlace) {
+            this.tags = tags
+            return successResult(this)
+        }
         return successResult(new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags))
+    }
+
+    /**
+     * Updates the tags in the current DataFrame either in place or by creating a new DataFrame.
+     *
+     * @param modifyInPlace - Determines whether the tags should be modified in place.
+     *        If true, the current DataFrame's tags will be updated directly.
+     *        If false, a new DataFrame instance will be created with the updated tags.
+     * @param tags - The new tag mapping to be applied to the DataFrame.
+     * @return Returns the current DataFrame if `modifyInPlace` is true;
+     *         otherwise, returns a new DataFrame instance with the updated tags.
+     */
+    private updateOrModify<T extends TagValue, C extends TagCoordinate>(modifyInPlace: boolean, tags: Tags<T, C>): DataFrame<V> {
+        if (modifyInPlace) {
+            this.tags = tags
+            return this
+        }
+        return new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags)
+    }
+
+    /**
+     * Removes a tag associated with a specific row of the data frame.
+     *
+     * @param rowIndex The zero-based index of the row from which the tag should be removed. It must
+     * fall within the valid range of rows in the data frame.
+     * @param name The name of the tag to be removed.
+     * @param modifyInPlace A boolean indicating whether the operation should modify the current
+     * data frame in place. Default is false.
+     * @return A `Result` object containing either the updated data frame (if the operation succeeds) or
+     * an error message (if the operation fails).
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame
+     *     .from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12],
+     *     ])
+     *     .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+     *     .getOrThrow()
+     *
+     * // remove the row tag from the data-frame
+     * const updatedDataFrame = dataFrame.removeRowTag(0, "row-tag").getOrThrow()
+     *
+     * // the row-tag has been removed, but the other tags are unchanged
+     * expect(updatedDataFrame.hasRowTagFor(0)).toBeFalsy()
+     * expect(updatedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+     * expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+     *
+     * // and the row-tag is still in the original data-frame
+     * expect(dataFrame.hasRowTagFor(0)).toBeTruthy()
+     * ```
+     */
+    public removeRowTag(
+        rowIndex: number,
+        name: string,
+        modifyInPlace: boolean = false
+    ): Result<DataFrame<V>, string> {
+        if (rowIndex < 0 || rowIndex >= this.numRows) {
+            return failureResult(
+                `(DataFrame::removeRowTag) Index for row tag is out of bounds; row_index: ${rowIndex}; 
+                valid_index_range: (0, ${this.numRows - 1}).`
+            )
+        }
+        return this.tags
+            .remove(tagIdFor(name, RowCoordinate.of(rowIndex)))
+            .map(updatedTags => this.updateOrModify(modifyInPlace, updatedTags))
+    }
+
+    /**
+     * Removes a tag associated with a specific column of the data-frame.
+     *
+     * @param columnIndex The zero-based index of the column from which the tag should be removed. It must
+     * fall within the valid range of columns in the data-frame.
+     * @param name The name of the tag to be removed.
+     * @param modifyInPlace A boolean indicating whether the operation should modify the current
+     * data frame in place. Default is false.
+     * @return A `Result` object containing either the updated data frame (if the operation succeeds) or
+     * an error message (if the operation fails).
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame
+     *     .from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12],
+     *     ])
+     *     .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+     *     .getOrThrow()
+     *
+     * // remove the column tag from the data-frame
+     * const updatedDataFrame = dataFrame.removeColumnTag(1, "column-tag").getOrThrow()
+     *
+     * // the column tag has been removed, but the other tags are unchanged
+     * expect(updatedDataFrame.hasRowTagFor(0)).toBeTruthy()
+     * expect(updatedDataFrame.hasColumnTagFor(1)).toBeFalsy()
+     * expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+     *
+     * // and the column tag in the original data-frame is still there
+     * expect(dataFrame.hasColumnTagFor(1)).toBeTruthy()
+     *
+     * ```
+     */
+    public removeColumnTag(
+        columnIndex: number,
+        name: string,
+        modifyInPlace: boolean = false
+    ): Result<DataFrame<V>, string> {
+        if (columnIndex < 0 || columnIndex >= this.numColumns) {
+            return failureResult(
+                `(DataFrame::removeColumnTag) Index for column tag is out of bounds; column_index: ${columnIndex}; 
+                valid_index_range: (0, ${this.numColumns - 1}).`
+            )
+        }
+        return this.tags
+            .remove(tagIdFor(name, ColumnCoordinate.of(columnIndex)))
+            .map(updatedTags => this.updateOrModify(modifyInPlace, updatedTags))
+    }
+
+    /**
+     * Removes a tag associated with a specified cell of the data-frame.
+     *
+     * @param rowIndex The zero-based index of the row from which the tag should be removed. It must
+     * fall within the valid range of rows in the data frame.
+     * @param columnIndex The zero-based index of the column from which the tag should be removed. It must
+     * fall within the valid range of columns in the data-frame.
+     * @param name The name of the tag to be removed.
+     * @param modifyInPlace A boolean indicating whether the operation should modify the current
+     * data frame in place. Default is false.
+     * @return A `Result` object containing either the updated data frame (if the operation succeeds) or
+     * an error message (if the operation fails).
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame
+     *     .from([
+     *         [1, 2, 3],
+     *         [4, 5, 6],
+     *         [7, 8, 9],
+     *         [10, 11, 12],
+     *     ])
+     *     .flatMap(df => df.tagRow(0, "row-tag", "row-value"))
+     *     .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+     *     .flatMap(df => df.tagCell(3, 2, "cell-tag", "cell-value"))
+     *     .getOrThrow()
+     *
+     * // remove a cell tag
+     * const updatedDataFrame = dataFrame.removeCellTag(3, 2, "cell-tag").getOrThrow()
+     *
+     * // the cell tag has been removed, but the other tags are unchanged
+     * expect(updatedDataFrame.hasRowTagFor(0)).toBeTruthy()
+     * expect(updatedDataFrame.hasColumnTagFor(1)).toBeTruthy()
+     * expect(updatedDataFrame.hasCellTagFor(3, 2)).toBeFalsy()
+     *
+     * // and the cell tag has not been removed from the original data-frame
+     * expect(dataFrame.hasCellTagFor(3, 2)).toBeTruthy()
+     * ```
+     */
+    public removeCellTag(
+        rowIndex: number,
+        columnIndex: number,
+        name: string,
+        modifyInPlace: boolean = false
+    ): Result<DataFrame<V>, string> {
+        if (rowIndex < 0 || rowIndex >= this.numRows) {
+            return failureResult(
+                `(DataFrame::removeCellTag) Index for row tag is out of bounds; row_index: ${rowIndex}; 
+                valid_index_range: (0, ${this.numRows - 1}).`
+            )
+        }
+        if (columnIndex < 0 || columnIndex >= this.numColumns) {
+            return failureResult(
+                `(DataFrame::removeCellTag) Index for column tag is out of bounds; column_index: ${columnIndex}; 
+                valid_index_range: (0, ${this.numColumns - 1}).`
+            )
+        }
+        return this.tags
+            .remove(tagIdFor(name, CellCoordinate.of(rowIndex, columnIndex)))
+            .map(updatedTags => this.updateOrModify(modifyInPlace, updatedTags))
     }
 
     /**

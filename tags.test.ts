@@ -291,6 +291,16 @@ describe('tags', () => {
 
             })
 
+            test("should be able to remove a tag by name and coordiante", () => {
+                const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
+                const tags = Tags.with<string>(tag);
+
+                const removeResult = tags.removeFor("removable-tag", RowCoordinate.of(0));
+
+                expect(removeResult.succeeded).toBe(true);
+                expect(removeResult.map(tags => tags.length()).getOrElse(-1)).toBe(0);
+            });
+
             test("should be able to remove a tag by ID", () => {
                 const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
                 const tags = Tags.with<string>(tag);
