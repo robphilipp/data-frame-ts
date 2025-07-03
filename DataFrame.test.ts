@@ -639,6 +639,24 @@ describe("Testing data-frame behavior", () => {
             expect(dataFrame).not.toEqual(expected)
         })
 
+        test("should be able to map a row in the data-frame using the column index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const expected = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 9, 11],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const updated = dataFrame.mapRow(2, (value: number, columnIndex: number) => value + columnIndex).getOrThrow()
+            expect(updated).toEqual(expected)
+            expect(dataFrame).not.toEqual(expected)
+        })
+
         test("should be able to map a row in the data-frame in-place", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
@@ -671,6 +689,24 @@ describe("Testing data-frame behavior", () => {
                 [10, 22, 12]
             ]).getOrThrow()
             const updated = dataFrame.mapColumn(1, (value: number) => value * 2).getOrThrow()
+            expect(updated).toEqual(expected)
+            expect(dataFrame).not.toEqual(expected)
+        })
+
+        test("should be able to map a column in the data-frame using the row-index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const expected = DataFrame.from([
+                [1, 2, 3],
+                [4, 6, 6],
+                [7, 10, 9],
+                [10, 14, 12]
+            ]).getOrThrow()
+            const updated = dataFrame.mapColumn(1, (value: number, rowIndex: number) => value + rowIndex).getOrThrow()
             expect(updated).toEqual(expected)
             expect(dataFrame).not.toEqual(expected)
         })
