@@ -10,6 +10,7 @@ A lightweight, immutable, two-dimensional data structure for TypeScript that all
 - [Basic Usage](#basic-usage)
   - [Creating a DataFrame](#creating-a-dataframe)
   - [Accessing Data](#accessing-data)
+    - [Extracting subframes](#extracting-subframes)
   - [Modifying Data](#modifying-data)
   - [Transforming Data](#transforming-data)
 - [Advanced Features](#advanced-features)
@@ -123,10 +124,45 @@ const allRows = dataFrom.rowSlices();  // [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
 // Get all columns (doesn't need to return a `Result`)
 const allColumns = dataFrom.columnSlices();  // [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
-
-// grab a sub-frame for a range
-const subFrame = dataFrame.subFrame(indexFrom(1, 1), indexFrom(2, 2)).getOrThrow() // [[5, 6], [8, 9]]
 ```
+
+#### Extracting subframes
+
+[(toc)](#table-of-contents)
+
+You can extract a subframe from a `DataFrame` using the `subFrame` method. This method takes two parameters:
+1. `start: Index` - The start (row, column) index of the selection range
+2. `end: Index` - The ending (row, column) index of the selection range
+
+The method returns a `Result` holding a new `DataFrame` that is a subset of the original `DataFrame` if the range is valid; otherwise a failure explaining the issue.
+
+```typescript
+// Create a DataFrame
+const dataFrame = DataFrame.from([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+    [10, 11, 12]
+]).getOrThrow()
+
+// Extract a subframe from row 1, column 1 to row 2, column 2
+// This will create a new DataFrame with the following data:
+// [[5, 6],
+//  [8, 9]]
+const subFrame = dataFrame.subFrame(indexFrom(1, 1), indexFrom(2, 2)).getOrThrow()
+
+// You can also extract a single row as a subframe
+const rowSubFrame = dataFrame.subFrame(indexFrom(1, 0), indexFrom(1, 2)).getOrThrow()
+// rowSubFrame contains: [[4, 5, 6]]
+
+// Or a single column as a subframe
+const columnSubFrame = dataFrame.subFrame(indexFrom(0, 1), indexFrom(3, 1)).getOrThrow()
+// columnSubFrame contains: [[2], [5], [8], [11]]
+```
+
+When extracting a subframe, any tags associated with the cells in the range are preserved and their coordinates are properly adjusted to match the new subframe. This ensures that tag information is maintained consistently when working with subframes.
+
+> **Note:** As of version 0.3.0, a bug has been fixed where tags were getting out of sync when a row or column was removed. Now, when you delete rows or columns or extract subframes, the tags are properly maintained and their coordinates are correctly adjusted.
 
 As another example, let's find all the rows in a data-frame that contain the same value as a some chosen element. Then let's create a new data-frame containing only those rows.
 
@@ -509,7 +545,7 @@ const dataFrame = DataFrame
 - `rowSlices(): Array<Array<V>>` - Returns all rows as a 2D array
 - `columnSlice(columnIndex: number): Result<Array<V>, string>` - Returns a copy of the specified column
 - `columnSlices(): Array<Array<V>>` - Returns all columns as a 2D array
-- `subFrame(start: Index, end: Index): Result<DataFrame<V>, string>` - Returns a sub-frame for the specified range
+- `subFrame(start: Index, end: Index): Result<DataFrame<V>, string>` - Returns a subframe for the specified range. The start and end parameters define the inclusive range of rows and columns to include. Any tags associated with cells in the range are preserved and their coordinates are properly adjusted to match the new subframe.
 - `copy(): DataFrame<V>` - Creates a copy of the DataFrame
 - `equals(other: DataFrame<V>): boolean` - Checks if this DataFrame equals another DataFrame
 
@@ -541,13 +577,21 @@ const dataFrame = DataFrame
 
 [(toc)](#table-of-contents)
 
-- `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
-- `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
-- `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T): Result<DataFrame<V>, string>` - Tags a specific cell with a name-value pair
+#### DataFrame Tagging Methods
+- `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
+- `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
+- `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific cell with a name-value pair
+- `removeRowTag(rowIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific row
+- `removeColumnTag(columnIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific column
+- `removeCellTag(rowIndex: number, columnIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific cell
+
+#### Tag Retrieval Methods
 - `rowTagsFor(rowIndex: number): Array<Tag<TagValue, RowCoordinate>>` - Retrieves all row tags associated with the specified row index
 - `columnTagsFor(columnIndex: number): Array<Tag<TagValue, ColumnCoordinate>>` - Retrieves all column tags associated with the specified column index
 - `cellTagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, CellCoordinate>>` - Retrieves all cell-specific tags associated with the specified (row, column) index
 - `tagsFor(rowIndex: number, columnIndex: number): Array<Tag<TagValue, TagCoordinate>>` - Retrieves all tags (row, column, and cell) associated with the specified (row, column) index
+
+#### Tag Query Methods
 - `hasRowTagFor(rowIndex: number): boolean` - Reports whether the row with the specified index has any row tags
 - `hasColumnTagFor(columnIndex: number): boolean` - Reports whether the column with the specified index has any column tags
 - `hasCellTagFor(rowIndex: number, columnIndex: number): boolean` - Reports whether the cell with the specified (row, column) index has any cell tags
@@ -555,18 +599,40 @@ const dataFrame = DataFrame
 - `filterTags(predicate: (tag: Tag<TagValue, TagCoordinate>) => boolean): Array<Tag<TagValue, TagCoordinate>>` - Returns an array of tags that meet the criteria specified in the predicate
 - `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` - Returns an array of cell values that are tagged with the specified tag
 
-The `TagValue` type represents values that can be used as tags. The library includes several coordinate types:
-- `RowCoordinate` - Represents a coordinate for a tag on an entire row
-- `ColumnCoordinate` - Represents a coordinate for a tag on an entire column
-- `CellCoordinate` - Represents a coordinate for a tag on a specific cell
+#### Tag Creation Helper Functions
+- `newRowTag(name: string, value: T, coordinate: RowCoordinate): RowTag<T>` - Creates a new row tag
+- `newColumnTag(name: string, value: T, coordinate: ColumnCoordinate): ColumnTag<T>` - Creates a new column tag
+- `newCellTag(name: string, value: T, coordinate: CellCoordinate): CellTag<T>` - Creates a new cell tag
 
+#### Coordinate Types
+The library includes several coordinate types for specifying tag locations:
+- `RowCoordinate` - Represents a coordinate for a tag on an entire row
+  - `RowCoordinate.of(row: number): RowCoordinate` - Creates a row coordinate
+  - `coordinate(): [number, NaN]` - Returns the row index
+  - `equals(other: TagCoordinate): boolean` - Compares with another coordinate
+- `ColumnCoordinate` - Represents a coordinate for a tag on an entire column
+  - `ColumnCoordinate.of(column: number): ColumnCoordinate` - Creates a column coordinate
+  - `coordinate(): [NaN, number]` - Returns the column index
+  - `equals(other: TagCoordinate): boolean` - Compares with another coordinate
+- `CellCoordinate` - Represents a coordinate for a tag on a specific cell
+  - `CellCoordinate.of(row: number, column: number): CellCoordinate` - Creates a cell coordinate
+  - `coordinate(): [number, number]` - Returns the row and column indices
+  - `equals(other: TagCoordinate): boolean` - Compares with another coordinate
+
+#### Tags Collection Management
 The `Tags` class provides methods for managing collections of tags:
 - `Tags.with<T>(...tag: Array<Tag<T, TagCoordinate>>)` - Creates a Tags object with the specified tags
 - `Tags.empty<T, C>()` - Creates an empty Tags object
-- `add(name, value, coordinate)` - Adds a new tag if it doesn't already exist
-- `replace(name, value, coordinate)` - Replaces an existing tag
-- `addOrReplace(name, value, coordinate)` - Adds a new tag or replaces an existing one
-- `remove(id)` - Removes a tag by ID
+- `add(tag: Tag<T, C>)` - Adds a new tag if it doesn't already exist
+- `replace(tag: Tag<T, C>)` - Replaces an existing tag
+- `addOrReplace(tag: Tag<T, C>)` - Adds a new tag or replaces an existing one
+- `remove(id: string)` - Removes a tag by ID
+- `removeFor(name: string, coordinate: C)` - Removes tags with the specified name and coordinate
+- `subset(start: Index, end: Index): Tags<T, C>` - Returns tags that are part of the subset defined by the range
+- `insertRow(rowIndex: number): Tags<T, C>` - Updates tag coordinates to accommodate a new row
+- `insertColumn(columnIndex: number): Tags<T, C>` - Updates tag coordinates to accommodate a new column
+- `removeRow(rowIndex: number): Tags<T, C>` - Updates tag coordinates after a row is removed
+- `removeColumn(columnIndex: number): Tags<T, C>` - Updates tag coordinates after a column is removed
 
 ## Contributing
 
