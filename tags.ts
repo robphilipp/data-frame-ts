@@ -42,6 +42,16 @@ export interface TagValue {
 }
 
 /**
+ * Creates a tag ID for a {@link Tag} given a name and a coordinate
+ * @param name The name of the tag
+ * @param coordinate The coordinate for the tag
+ * @return a tag ID for a {@link Tag} given a name and a coordinate
+ */
+export function tagIdFor<C extends TagCoordinate>(name: string, coordinate: C): string {
+    return `tag-${name}-${coordinate.toString().replace(/ /g, "")}`
+}
+
+/**
  * Represents a tag with a name, value, and coordinate.
  * A tag is used to associate metadata with a specific location in a data frame.
  * @template V The type of the tag's value
@@ -61,7 +71,7 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
      * @protected
      */
     protected constructor(readonly name: string, readonly value: V, readonly coordinate: C) {
-        this.id = `tag-${name}-${coordinate.toString().replace(/ /g, "")}`
+        this.id = tagIdFor(name, coordinate)
     }
 
     /**
@@ -82,6 +92,16 @@ export abstract class Tag<V extends TagValue, C extends TagCoordinate> {
      */
     equals(other: Tag<V, C>): boolean {
         return this.name === other.name && this.value.toString() === other.value.toString() && this.coordinate.equals(other.coordinate)
+    }
+
+    /**
+     * Determines whether the name and coordinate match this tag
+     * @param name The name of the tag
+     * @param coordinate The coordinate (in the data-frame) to which the tag applies
+     * @return `true` if the name and coordinate match this tag; `false` otherwise
+     */
+    matchesId(name: string, coordinate: C): boolean {
+        return this.id === tagIdFor(name, coordinate)
     }
 
     /**
@@ -328,6 +348,16 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
     }
 
     /**
+     * Compares this {@link Tags} object with the "other" {@link Tags} object
+     * @param other The other tags to compare to this one
+     * @return `true` if the other {@link Tags} object equals this one; `false` otherwise
+     */
+    public equals(other: Tags<T, C>): boolean {
+        return this.tags.length === other.tags.length &&
+            this.tags.every((tag, index) => tag.equals(other.tags[index]))
+    }
+
+    /**
      * Creates an empty {@link Tags} object.
      * @return An empty {@link Tags} object.
      */
@@ -473,6 +503,28 @@ export class Tags<T extends TagValue, C extends TagCoordinate> {
             return this.replace(tag).getOrElse(this.copy())
         }
         return this.add(tag).getOrElse(this.copy())
+    }
+
+    /**
+     * Removes the tag with the specified name and coordinate from the collection of tags.
+     * If no tag with the specified name and coordinate exists, this method does nothing.
+     * @param name The name of the tag to remove
+     * @param coordinate The coordinate of the tag to remove
+     * @return A {@link Result} whose success value is a new {@link Tags} object with the
+     * tag removed. When the specified ID is not found, then returns a failure.
+     * @example
+     * ```typescript
+     * const tag = newRowTag("removable-tag", "value", RowCoordinate.of(0));
+     * const tags = Tags.with<string>(tag);
+     *
+     * const removeResult = tags.remove(tag.id);
+     *
+     * expect(removeResult.succeeded).toBe(true);
+     * expect(removeResult.map(tags => tags.length()).getOrElse(-1)).toBe(0);
+     * ```
+     */
+    public removeFor(name: string, coordinate: C): Result<Tags<T, C>, string> {
+        return this.remove(tagIdFor(name, coordinate))
     }
 
     /**
