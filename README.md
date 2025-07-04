@@ -84,7 +84,7 @@ const result2 = DataFrame.fromColumnData([
 ])
 ```
 
-The first function, `from(...)` accepts an array of rows, where each row is represented by an array of values of type `V`. The second function, `fromColumnData(...)` accepts an array of columns, where each column is represented by an array of values of type, you guessed it, `V`. In both cases, the `DataFrame` converts the data to its internal representation, and all methods behave identically, regardless of the factory function used to instantiate the `DataFrame` object.
+The first function, `from(...)` accepts an array of rows, where each row is represented by an array of values of type `V`. The second function, `fromColumnData(...)` accepts an array of columns, where each column is represented by an array of values of the type, you guessed it, `V`. In both cases, the `DataFrame` converts the data to its internal representation, and all methods behave identically, regardless of the factory function used to instantiate the `DataFrame` object.
 
 ### Accessing Data
 
@@ -204,7 +204,7 @@ expect(filteredDataFrame).toEqual(expectedDataFrame)
 
 [(toc)](#table-of-contents)
 
-Now that we can create data-frames, and get basic information from them, we may also want to transform or update the data-frame. The idiomatic way of updating or transforming a data-frame leaves the original data-frame unmodified, and returns a copy of the original data-frame with the updated values. When performance is an issue, there are also methods for updating and transforming the data-frame in-place.
+Now that we can create data-frames and get basic information from them, we may also want to transform or update the data-frame. The idiomatic way of updating or transforming a data-frame leaves the original data-frame unmodified and returns a copy of the original data-frame with the updated values. When performance is an issue, there are also methods for updating and transforming the data-frame in-place.
 
 ```typescript
 // Create a data-frame
@@ -260,7 +260,7 @@ const stillOriginalDataFrame = dataFrame.insertRowBefore(1, [10, 11, 12]).getOrT
 
 [(toc)](#table-of-contents)
 
-The previous section should an example of modifying the data-frames. This sections gives examples of transforming data-frames.
+The previous section should be an example of modifying the data-frames. This sections gives examples of transforming data-frames.
 
 ```typescript
 
@@ -282,20 +282,28 @@ const transposed = dataFrame.transpose();
 const stringDF = dataFrame.mapElements(value => value.toString());  // Convert all numbers to strings
 
 // Map a row (returns a new DataFrame)
-const mappedRow = dataFrame.mapRow(1, value => value * 2).getOrThrow();
+// Note: The mapper function now receives the column index as the second parameter
+const mappedRow = dataFrame.mapRow(1, (value, columnIndex) => value * columnIndex).getOrThrow();
 
 // Map a column (returns a new DataFrame)
-const mappedColumn = dataFrame.mapColumn(1, value => value * 2).getOrThrow();
+// Note: The mapper function now receives the row index as the second parameter
+const mappedColumn = dataFrame.mapColumn(1, (value, rowIndex) => value * rowIndex).getOrThrow();
+
+// Change data type through mapping (from numbers to strings)
+const stringRowDF = dataFrame.mapRow(1, (value) => value.toString()).getOrThrow();
+const stringColumnDF = dataFrame.mapColumn(1, (value) => value.toString()).getOrThrow();
 
 //
 // these two examples modifies the original `dataFrame` and returns it
 //
 
 // Map a row in-place (modifies the original DataFrame)
-const mappedRowInPlace = dataFrame.mapRowInPlace(1, value => value * 2).getOrThrow();
+// Note: The mapper function now receives the column index as the second parameter
+const mappedRowInPlace = dataFrame.mapRowInPlace(1, (value, columnIndex) => value * columnIndex).getOrThrow();
 
 // Map a column in-place (modifies the original DataFrame)
-const mappedColumnInPlace = dataFrame.mapColumnInPlace(1, value => value * 2).getOrThrow();
+// Note: The mapper function now receives the row index as the second parameter
+const mappedColumnInPlace = dataFrame.mapColumnInPlace(1, (value, rowIndex) => value * rowIndex).getOrThrow();
 ```
 
 The previous example showed simple transformations of the `dataFrame`. The next examples show how to do multiple transformations on a data-frame idiomatically and get back the resultant transformed data.
@@ -354,7 +362,7 @@ The `DataFrame` class supports tagging rows, columns, and cells with metadata. T
 Tagging elements in a `DataFrame` is achieved by using the `tagRow(...)`, `tagColumn(...)`, and `tagCell(...)` methods. 
 1. Tagging a row means that all the elements (cells) in that row have that tag. 
 2. Tagging a column means that all the elements (cells) in that column have that tag. 
-3. Tagging a cell, only tags the cell at the specified (row, column) coordinates.
+3. Tagging a cell only tags the cell at the specified (row, column) coordinates.
 
 A row, column, and cell can be tagged with any data type that implements the `TagValue` interface. Essentially, the data type must implement a `toString()` method. Not a high bar.
 
@@ -385,6 +393,46 @@ const taggedDataFrame = dataFrame.tagRow(0, "category", "header")
         .getOrThrow()
 
 // taggedDataFrame and the original dataFrame are the same object
+```
+
+#### Removing Tags
+
+[(toc)](#table-of-contents)
+
+The `DataFrame` class provides methods to remove tags from rows, columns, and cells. Like the tagging methods, these methods return a new `DataFrame` by default, but can modify the original `DataFrame` if the `modifyInPlace` parameter is set to `true`.
+
+```typescript
+// Create a tagged DataFrame
+const dataFrame = DataFrame.from([
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9]
+]).getOrThrow();
+
+// Add some tags
+const taggedDataFrame = dataFrame.tagRow(0, "row-tag", "row-value")
+  .flatMap(df => df.tagColumn(1, "column-tag", "column-value"))
+  .flatMap(df => df.tagCell(2, 2, "cell-tag", "cell-value"))
+  .getOrThrow();
+
+// Remove a row tag (returns a new DataFrame)
+const dfWithoutRowTag = taggedDataFrame.removeRowTag(0, "row-tag").getOrThrow();
+
+// Remove a column tag (returns a new DataFrame)
+const dfWithoutColumnTag = taggedDataFrame.removeColumnTag(1, "column-tag").getOrThrow();
+
+// Remove a cell tag (returns a new DataFrame)
+const dfWithoutCellTag = taggedDataFrame.removeCellTag(2, 2, "cell-tag").getOrThrow();
+
+// Chain multiple tag removal operations
+const cleanDataFrame = taggedDataFrame.removeRowTag(0, "row-tag")
+  .flatMap(df => df.removeColumnTag(1, "column-tag"))
+  .flatMap(df => df.removeCellTag(2, 2, "cell-tag"))
+  .getOrThrow();
+
+// Remove a tag in-place (modifies the original DataFrame)
+taggedDataFrame.removeRowTag(0, "row-tag", true).getOrThrow();
+// Now taggedDataFrame no longer has the "row-tag" tag on row 0
 ```
 
 #### Retrieving Tags
@@ -461,7 +509,7 @@ const hasAnyTag = taggedDataFrame.hasTagFor(1, 1);  // true if position (1,1) ha
 
 [(toc)](#table-of-contents)
 
-The previous example demonstrated how to retrieve tags and determine whether a cell is tagged. In this section we demonstrate retrieving the cells that are tagged. The `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` method provides a means for doing this. When handed a tag, it returns a `Result` holding a array of `CellValue<T>` objects of the shape
+The previous example demonstrated how to retrieve tags and determine whether a cell is tagged. In this section we demonstrate retrieving the cells that are tagged. The `cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string>` method provides a means for doing this. When handed a tag, it returns a `Result` holding an array of `CellValue<T>` objects of the shape
 
 ```typescript
 {
@@ -499,7 +547,7 @@ const cellValues = dataFrame
 
 [(toc)](#table-of-contents)
 
-The library uses a [Result](https://github.com/robphilipp/result) class from the [result-fn](https://www.npmjs.com/package/result-fn) package for error handling. In a nutshell, the `Result` class is returned from a function that could fail. The `Result` holds either a `success` or a `failure`, depending on the outcome. The value of the `success` is the successful execution of the function. The value of the `failure` is an error object, that could be a string or some other more complex object. `Result`s can be chained. In a results chain, the evaluation in the chain is only performed if the previous evaluation resulted in a `success`, otherwise it drops through. Here are some examples.
+The library uses a [Result](https://github.com/robphilipp/result) class from the [result-fn](https://www.npmjs.com/package/result-fn) package for error handling. In a nutshell, the `Result` class is returned from a function that could fail. The `Result` holds either a `success` or a `failure`, depending on the outcome. The value of the `success` is the successful execution of the function. The value of the `failure` is an error object that could be a string or some other more complex object. `Result`s can be chained. In a Results chain, the evaluation in the chain is only performed if the previous evaluation resulted in a `success`, otherwise it drops through. Here are some examples.
 
 ```typescript
 const dataFrame = DataFrame
@@ -545,7 +593,7 @@ const dataFrame = DataFrame
 - `rowSlices(): Array<Array<V>>` - Returns all rows as a 2D array
 - `columnSlice(columnIndex: number): Result<Array<V>, string>` - Returns a copy of the specified column
 - `columnSlices(): Array<Array<V>>` - Returns all columns as a 2D array
-- `subFrame(start: Index, end: Index): Result<DataFrame<V>, string>` - Returns a subframe for the specified range. The start and end parameters define the inclusive range of rows and columns to include. Any tags associated with cells in the range are preserved and their coordinates are properly adjusted to match the new subframe.
+- `subFrame(start: Index, end: Index): Result<DataFrame<V>, string>` - Returns a subframe for the specified range. The start and end parameters define the inclusive range of rows and columns to include. Any tags associated with cells in the range are preserved, and their coordinates are properly adjusted to match the new subframe.
 - `copy(): DataFrame<V>` - Creates a copy of the DataFrame
 - `equals(other: DataFrame<V>): boolean` - Checks if this DataFrame equals another DataFrame
 
@@ -568,10 +616,10 @@ const dataFrame = DataFrame
 
 - `transpose(): DataFrame<V>` - Transposes the DataFrame (rows become columns and columns become rows)
 - `mapElements<U>(mapper: (value: V, rowIndex: number, columnIndex: number) => U): DataFrame<U>` - Applies a function to each element in the DataFrame and returns a new DataFrame
-- `mapRow(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and returns a new DataFrame
-- `mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a row and modifies the original DataFrame
-- `mapColumn(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and returns a new DataFrame
-- `mapColumnInPlace(columnIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string>` - Maps a function over a column and modifies the original DataFrame
+- `mapRow<U>(rowIndex: number, mapper: (value: V, columnIndex: number) => U): Result<DataFrame<U>, string>` - Maps a function over a row and returns a new DataFrame. The mapper function receives the column index as the second parameter.
+- `mapRowInPlace(rowIndex: number, mapper: (value: V, columnIndex: number) => V): Result<DataFrame<V>, string>` - Maps a function over a row and modifies the original DataFrame. The mapper function receives the column index as the second parameter.
+- `mapColumn<U>(columnIndex: number, mapper: (value: V, rowIndex: number) => U): Result<DataFrame<U>, string>` - Maps a function over a column and returns a new DataFrame. The mapper function receives the row index as the second parameter.
+- `mapColumnInPlace(columnIndex: number, mapper: (value: V, rowIndex: number) => V): Result<DataFrame<V>, string>` - Maps a function over a column and modifies the original DataFrame. The mapper function receives the row index as the second parameter.
 
 ### Tagging Methods
 
@@ -629,7 +677,7 @@ The `Tags` class provides methods for managing collections of tags:
 - `remove(id: string)` - Removes a tag by ID
 - `removeFor(name: string, coordinate: C)` - Removes tags with the specified name and coordinate
 - `subset(start: Index, end: Index): Tags<T, C>` - Returns tags that are part of the subset defined by the range
-- `insertRow(rowIndex: number): Tags<T, C>` - Updates tag coordinates to accommodate a new row
+- `insertRow(rowIndex: number): Tags<T, C>` - Update tag coordinates to accommodate a new row
 - `insertColumn(columnIndex: number): Tags<T, C>` - Updates tag coordinates to accommodate a new column
 - `removeRow(rowIndex: number): Tags<T, C>` - Updates tag coordinates after a row is removed
 - `removeColumn(columnIndex: number): Tags<T, C>` - Updates tag coordinates after a column is removed
@@ -644,4 +692,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 [(toc)](#table-of-contents)
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License-—see the LICENSE file for details.
