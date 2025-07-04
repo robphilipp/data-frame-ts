@@ -639,6 +639,24 @@ describe("Testing data-frame behavior", () => {
             expect(dataFrame).not.toEqual(expected)
         })
 
+        test("should be able to map a row in the data-frame using the column index", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const expected = DataFrame.from<number | string>([
+                [1, 2, 3],
+                [4, 5, 6],
+                ['7 + 0', '8 + 1', '9 + 2'],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const updated = dataFrame.mapRow<number | string>(2, (value, columnIndex) => `${value} + ${columnIndex}`).getOrThrow()
+            expect(updated).toEqual(expected)
+            expect(dataFrame).not.toEqual(expected)
+        })
+
         test("should be able to map a row in the data-frame in-place", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
@@ -658,6 +676,24 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to map a column in the data-frame", () => {
+            const dataFrame = DataFrame.from<number | string>([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+            const expected = DataFrame.from([
+                [1, '4', 3],
+                [4, '10', 6],
+                [7, '16', 9],
+                [10, '22', 12]
+            ]).getOrThrow()
+            const updated = dataFrame.mapColumn(1, (value: number | string) => `${value as number * 2}`).getOrThrow()
+            expect(updated).toEqual(expected)
+            expect(dataFrame).not.toEqual(expected)
+        })
+
+        test("should be able to map a column in the data-frame using the row-index", () => {
             const dataFrame = DataFrame.from([
                 [1, 2, 3],
                 [4, 5, 6],
@@ -665,12 +701,12 @@ describe("Testing data-frame behavior", () => {
                 [10, 11, 12]
             ]).getOrThrow()
             const expected = DataFrame.from([
-                [1, 4, 3],
-                [4, 10, 6],
-                [7, 16, 9],
-                [10, 22, 12]
+                [1, '2 + 0', 3],
+                [4, '5 + 1', 6],
+                [7, '8 + 2', 9],
+                [10, '11 + 3', 12]
             ]).getOrThrow()
-            const updated = dataFrame.mapColumn(1, (value: number) => value * 2).getOrThrow()
+            const updated = dataFrame.mapColumn(1, (value, rowIndex) => `${value} + ${rowIndex}`).getOrThrow()
             expect(updated).toEqual(expected)
             expect(dataFrame).not.toEqual(expected)
         })

@@ -1,5 +1,10 @@
 # changelog
 
+## 0.5.0
+
+1. Updated the mapping functions (`mapRow`, `mapColumn`, `mapRowInPlace`, and `mapColumnInPlace`) to hand the `mapper` callback the indexes. For example, the `mapRow` function hands the mapper the `columIndex`.
+2. Updated the `mapRow` and `mapColumn` functions to allow the resultant data-frame's data-type to be different from the original data-frame's data-type.
+
 ## 0.4.0
 
 1. Changed `DataFrame` tagging to return a new modified `DataFrame`, leaving the original `DataFrame` unchanged. Optionally, can have tagging function modify-in-place.
