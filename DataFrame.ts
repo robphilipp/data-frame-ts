@@ -982,6 +982,10 @@ export class DataFrame<V> {
     /**
      * Maps the data of a specific row in the DataFrame using the provided mapper function and returns
      * a new DataFrame. This method does not update the original DataFrame.
+     * <p>
+     * The example below shows how to convert a data-frame that has only `number` to one that has a data-type
+     * of `number | string`. The new data-type must be compatible with the resultant data-types in the new
+     * data-frame.
      *
      * @param rowIndex - The index of the row to be mapped. Must be within the bounds of the DataFrame (0 to numRows-1).
      * @param mapper - A function applied to transform each cell value in the specified row.
@@ -997,32 +1001,32 @@ export class DataFrame<V> {
      *     [7, 8, 9],
      *     [10, 11, 12]
      * ]).getOrThrow()
-     * const expected = DataFrame.from([
+     *
+     * // map the row and return a new data-frame, changing the data-type for the new data-frame
+     * const updated = dataFrame.mapRow<number | string>(2, (value, columnIndex) => `${value} + ${columnIndex}`).getOrThrow()
+     *
+     * const expected = DataFrame.from<number | string>([
      *     [1, 2, 3],
      *     [4, 5, 6],
-     *     [14, 16, 18],
+     *     ['7 + 0', '8 + 1', '9 + 2'],
      *     [10, 11, 12]
      * ]).getOrThrow()
-     *
-     * // map the row and return a new data-frame
-     * const updated = dataFrame.mapRow(2, (value: number) => value * 2).getOrThrow()
-     *
      * expect(updated).toEqual(expected)
      *
-     * // the original data-frame is unchanged
+     * // the original data-frame is not changed
      * expect(dataFrame).not.toEqual(expected)
      * ```
      */
-    public mapRow(rowIndex: number, mapper: (value: V, columnIndex: number) => V): Result<DataFrame<V>, string> {
+    public mapRow<U>(rowIndex: number, mapper: (value: V, columnIndex: number) => U): Result<DataFrame<U>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
             return failureResult(
                 `(DataFrame::mapRow) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`
             )
         }
-        const updated = this.data.slice()
+        const updated = this.data.slice() as Array<unknown> as Array<U>
         for (let i = rowIndex * this.numColumns; i < (rowIndex + 1) * this.numColumns; i++) {
             const column = i - rowIndex * this.numColumns
-            updated[i] = mapper(updated[i], column)
+            updated[i] = mapper(this.data[i], column)
         }
         return successResult(new DataFrame(updated, this.numRows, this.numColumns, this.tags.copy()))
     }
@@ -1060,14 +1064,15 @@ export class DataFrame<V> {
      * expect(dataFrame).toEqual(updated)
      * ```
      */
-    public mapRowInPlace(rowIndex: number, mapper: (value: V) => V): Result<DataFrame<V>, string> {
+    public mapRowInPlace(rowIndex: number, mapper: (value: V, columnIndex: number) => V): Result<DataFrame<V>, string> {
         if (rowIndex < 0 || rowIndex >= this.numRows) {
             return failureResult(
                 `(DataFrame::mapRowInPlace) Invalid row index. Row index must be in [0, ${this.numRows}); row_index: ${rowIndex}`
             )
         }
         for (let i = rowIndex * this.numColumns; i < (rowIndex + 1) * this.numColumns; i++) {
-            this.data[i] = mapper(this.data[i])
+            const column = i - rowIndex * this.numColumns
+            this.data[i] = mapper(this.data[i], column)
         }
         return successResult(this)
     }
@@ -1090,29 +1095,31 @@ export class DataFrame<V> {
      *     [10, 11, 12]
      * ]).getOrThrow()
      * const expected = DataFrame.from([
-     *     [1, 4, 3],
-     *     [4, 10, 6],
-     *     [7, 16, 9],
-     *     [10, 22, 12]
+     *     [1, '2 + 0', 3],
+     *     [4, '5 + 1', 6],
+     *     [7, '8 + 2', 9],
+     *     [10, '11 + 3', 12]
      * ]).getOrThrow()
+     * // updated the data-frame in-place
+     * const updated = dataFrame.mapColumn(1, (value, rowIndex) => `${value} + ${rowIndex}`).getOrThrow()
      *
-     * // multiply all the values in the second column by 2 and return a new data-frame,
-     * // leaving the original data-frame untouched
-     * const updated = dataFrame.mapColumn(1, (value: number) => value * 2).getOrThrow()
      * expect(updated).toEqual(expected)
+     *
+     * // the original data-frame is not changed
      * expect(dataFrame).not.toEqual(expected)
+
      * ```
      */
-    public mapColumn(columnIndex: number, mapper: (value: V, rowIndex: number) => V): Result<DataFrame<V>, string> {
+    public mapColumn<U>(columnIndex: number, mapper: (value: V, rowIndex: number) => U): Result<DataFrame<U>, string> {
         if (columnIndex < 0 || columnIndex >= this.numColumns) {
             return failureResult(
                 `(DataFrame::mapColumn) Invalid column index. Column index must be in [0, ${this.numColumns}); row_index: ${columnIndex}`
             )
         }
-        const updated = this.data.slice()
+        const updated = this.data.slice() as Array<unknown> as Array<U>
         for (let i = columnIndex; i < this.data.length; i += this.numColumns) {
             const row = Math.floor((i - columnIndex) / this.numColumns)
-            updated[i] = mapper(updated[i], row)
+            updated[i] = mapper(this.data[i], row)
         }
         return successResult(new DataFrame(updated, this.numRows, this.numColumns, this.tags.copy()))
     }
