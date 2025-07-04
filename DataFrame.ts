@@ -80,10 +80,6 @@ export function indexFrom(row: number, column: number): Index {
  * ```
  */
 export class DataFrame<V> {
-    // private readonly data: Array<V>
-    // private readonly numColumns: number
-    // private readonly numRows: number
-    // private tags: Tags<TagValue, TagCoordinate> = Tags.empty()
 
     /**
      * Constructs an instance of the class with the given data, number of rows, and number of columns.
