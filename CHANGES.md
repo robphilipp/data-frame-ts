@@ -1,5 +1,9 @@
 # changelog
 
+## 0.5.2
+
+1. Cleaned up naming in the version 0.5.1 fix.s
+
 ## 0.5.1
 
 1. Fixed bug in the error output of pushRow which incorrectly used the data-frames column-count instead of the number of elements in the row being pushed.
