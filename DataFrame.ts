@@ -80,10 +80,6 @@ export function indexFrom(row: number, column: number): Index {
  * ```
  */
 export class DataFrame<V> {
-    // private readonly data: Array<V>
-    // private readonly numColumns: number
-    // private readonly numRows: number
-    // private tags: Tags<TagValue, TagCoordinate> = Tags.empty()
 
     /**
      * Constructs an instance of the class with the given data, number of rows, and number of columns.
@@ -683,9 +679,8 @@ export class DataFrame<V> {
     public pushRow(row: Array<V>): Result<DataFrame<V>, string> {
         if (row.length !== this.numColumns) {
             return failureResult(`(DataFrame::pushRow) The row must have the same number of elements as the data has columns. ` +
-                `num_rows: ${this.numRows}; num_columns: ${row.length}`)
+                `num_rows: ${row.length}; num_columns: ${this.numColumns}`)
         }
-        // todo adjust tags and add them to the constructor
         return successResult(new DataFrame(this.data.concat(row), this.numRows + 1, this.numColumns, this.tags.copy()))
     }
 

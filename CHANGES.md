@@ -1,5 +1,9 @@
 # changelog
 
+## 0.5.1
+
+1. Fixed bug in the error output of pushRow which incorrectly used the data-frames column-count instead of the number of elements in the row being pushed.
+
 ## 0.5.0
 
 1. Updated the mapping functions (`mapRow`, `mapColumn`, `mapRowInPlace`, and `mapColumnInPlace`) to hand the `mapper` callback the indexes. For example, the `mapRow` function hands the mapper the `columIndex`.
