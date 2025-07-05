@@ -679,7 +679,7 @@ export class DataFrame<V> {
     public pushRow(row: Array<V>): Result<DataFrame<V>, string> {
         if (row.length !== this.numColumns) {
             return failureResult(`(DataFrame::pushRow) The row must have the same number of elements as the data has columns. ` +
-                `num_rows: ${row.length}; num_columns: ${this.numColumns}`)
+                `num_row_elements: ${row.length}; num_columns: ${this.numColumns}`)
         }
         return successResult(new DataFrame(this.data.concat(row), this.numRows + 1, this.numColumns, this.tags.copy()))
     }
