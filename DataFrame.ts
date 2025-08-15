@@ -932,31 +932,6 @@ export class DataFrame<V> {
         return new DataFrame(transposed, this.numColumns, this.numRows, this.tags.transpose())
     }
 
-    replaceRow(rowIndex: number, row: Array<V>): Result<DataFrame<V>, string> {
-        if (rowIndex < 0 && rowIndex >= this.numRows) {
-            return failureResult(`(DataFrame::replaceRowAt) Index out of bounds; row: ${rowIndex}; range: (0, ${this.numRows})`)
-        }
-        if (row.length !== this.numColumns) {
-            return failureResult(`(DataFrame::replaceRowAt) The row must have the same number of elements as the data has columns. ` +
-                `num_rows: ${this.numRows}; num_columns: ${row.length}`)
-        }
-        return this.insertRowBefore(rowIndex, row).flatMap(df => df.deleteRowAt(rowIndex + 1))
-    }
-
-    replaceColumn(columnIndex: number, column: Array<V>): Result<DataFrame<V>, string> {
-        if (columnIndex < 0 && columnIndex >= this.numColumns) {
-            return failureResult(
-                `(DataFrame::replaceColumnAt) Index out of bounds; ` +
-                `column: ${columnIndex}; range: (0, ${this.numColumns})`
-            )
-        }
-        if (column.length !== this.numRows) {
-            return failureResult(`(DataFrame::replaceColumnAt) The column must have the same number of rows as the data. ` +
-                `num_rows: ${this.numRows}; num_columns: ${column.length}`)
-        }
-        return this.insertColumnBefore(columnIndex, column).flatMap(df => df.deleteColumnAt(columnIndex + 1))
-    }
-
     /**
      * Applies the specified mapper to each element in the data-frame and returns a new data-frame
      * with the updated elements.
