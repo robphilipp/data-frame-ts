@@ -1,5 +1,11 @@
 # changelog
 
+## 1.0.0
+
+Previously the `DataFrame.empty()` function returned an empty `DataFrame` object wrapped in a [`Result`](https://www.npmjs.com/package/result-fn). The issue is that `DataFrame.empty()` will not fail and wrapping it in a `Result` is incorrect semantically, and makes creating an empty `DataFrame` cumbersome. 
+
+This update fixes that issue.
+
 ## 0.5.2
 
 1. Cleaned up naming in the version 0.5.1 fix.s
