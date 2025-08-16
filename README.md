@@ -57,9 +57,10 @@ Key features:
 
 [(toc)](#table-of-contents)
 
-The `DataFrame` class provides two factory functions for creating a `DataFrame` object. Both of these factory methods are `static` (and remain part of the class for namespacing). The constructor is `private` and cannot be accessed directly.
+The `DataFrame` class provides three factory functions for creating a `DataFrame` object. Both of these factory methods are `static` (and remain part of the class for namespacing). The constructor is `private` and cannot be accessed directly.
 1. `DataFrame.from<V>(data: Array<Array<V>>, rowForm: boolean = true): Result<DataFrame<V>, string>`
 2. `fromColumnData<V>(data: Array<Array<V>>): Result<DataFrame<V>, string>`
+3. `empty<V>(): DataFrame<V>`
 
 ```typescript
 import { DataFrame } from 'data-frame-ts';
@@ -85,6 +86,17 @@ const result2 = DataFrame.fromColumnData([
 ```
 
 The first function, `from(...)` accepts an array of rows, where each row is represented by an array of values of type `V`. The second function, `fromColumnData(...)` accepts an array of columns, where each column is represented by an array of values of the type, you guessed it, `V`. In both cases, the `DataFrame` converts the data to its internal representation, and all methods behave identically, regardless of the factory function used to instantiate the `DataFrame` object.
+
+The third function creates an empty `DataFrame`.
+
+```typescript
+import { DataFrame } from 'data-frame-ts';
+
+const emptyDataFrame = DataFrame.empty<number>()
+
+// returns true
+const iFeelSoEmpty = emptyDataFrame.isEmpty()
+````
 
 ### Accessing Data
 
