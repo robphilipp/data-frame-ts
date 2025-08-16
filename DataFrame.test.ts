@@ -60,11 +60,10 @@ describe("Testing data-frame behavior", () => {
         })
 
         test("should be able to create an empty data-frame", () => {
-            const result = DataFrame.empty()
-            expect(result.succeeded).toBeTruthy()
-            expect(result.getOrThrow().rowCount()).toEqual(0)
-            expect(result.getOrThrow().columnCount()).toEqual(0)
-            expect(result.getOrThrow().isEmpty()).toBe(true)
+            const dataFrame = DataFrame.empty()
+            expect(dataFrame.rowCount()).toEqual(0)
+            expect(dataFrame.columnCount()).toEqual(0)
+            expect(dataFrame.isEmpty()).toBe(true)
         })
 
         test("should not be able to create a data-frame for a 2D array in columnar form with invalid dimensions", () => {

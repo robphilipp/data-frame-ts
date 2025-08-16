@@ -157,19 +157,19 @@ export class DataFrame<V> {
     }
 
     /**
-     * Creates an empty DataFrame. Returns a {@link Result} containing the empty {@link DataFrame}
+     * Creates an empty DataFrame.
      *
      * @template T the element type
-     * @return A {@link Result} object containing an empty data frame
+     * @return An empty data frame
      *
      * @example
      * ```typescript
      * // create a data-frame with numbers and strings
-     * const dataFrame: Result<DataFrame<number | string>, string> = DataFrame.empty<number | string>()
+     * const dataFrame: DataFrame<number | string> = DataFrame.empty<number | string>()
      * ```
      */
-    static empty<V>(): Result<DataFrame<V>, string> {
-        return DataFrame.from([], false)
+    static empty<V>(): DataFrame<V> {
+        return DataFrame.from<V>([], false).getOrThrow()
     }
 
     /**
