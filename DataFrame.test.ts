@@ -1350,4 +1350,34 @@ describe("Testing data-frame behavior", () => {
             expect(isCellTag(cellTags[0])).toBeTruthy()
         })
     })
+
+    // describe("Performance Tests", () => {
+    //
+    //     const ROWS = 1000
+    //     const COLUMNS = 10000
+    //     const monsterData = Array(ROWS)
+    //         .fill(0)
+    //         .map((_, i) => Array(COLUMNS)
+    //             .fill(0)
+    //             .map((_, j) => i * ROWS + j)
+    //         )
+    //
+    //     const monsterDf = DataFrame.from(monsterData).getOrThrow()
+    //
+    //     test("should be able to create a large data frame", () => {
+    //         const df = DataFrame.from(monsterData).getOrThrow()
+    //         expect(df.rowCount()).toBe(ROWS)
+    //         expect(df.columnCount()).toBe(COLUMNS)
+    //     })
+    //
+    //     test("should be able to transpose a large data frame", () => {
+    //         const transposed = monsterDf.transpose()
+    //         expect(transposed.rowCount()).toBe(COLUMNS)
+    //         expect(transposed.columnCount()).toBe(ROWS)
+    //
+    //         const untransposed = transposed.transpose()
+    //         expect(untransposed.rowCount()).toBe(ROWS)
+    //         expect(untransposed.columnCount()).toBe(COLUMNS)
+    //     })
+    // })
 })

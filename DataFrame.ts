@@ -125,8 +125,11 @@ export class DataFrame<V> {
             return successResult(new DataFrame<V>([], 0, 0, Tags.empty()))
         }
         return validateDimensions(data, rowForm)
-            .map(data => new DataFrame<V>(data.flatMap(row => row), data.length, data[0].length, Tags.empty()))
+            .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
             .map(df => rowForm ? df : df.transpose())
+        // return validateDimensions(data, rowForm)
+        //     .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
+        //     .map(df => rowForm ? df : df.transpose())
     }
 
     /**
@@ -738,7 +741,7 @@ export class DataFrame<V> {
         rows.forEach((row: Array<V>, rowIndex) => row.splice(columnIndex, 0, column[rowIndex]))
 
         const tags = this.tags.insertColumn(columnIndex)
-        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns + 1, tags))
+        return successResult(new DataFrame(rows.flat(), this.numRows, this.numColumns + 1, tags))
     }
 
     /**
@@ -889,7 +892,7 @@ export class DataFrame<V> {
         rows.forEach((row: Array<V>) => row.splice(columnIndex, 1))
 
         const tags = this.tags.removeColumn(columnIndex)
-        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns - 1, tags))
+        return successResult(new DataFrame(rows.flat(), this.numRows, this.numColumns - 1, tags))
     }
 
     /**
