@@ -1,5 +1,9 @@
 # changelog
 
+## 1.0.2
+
+Fixed the name set for the conditional cell-tag so that it is what was specified.
+
 ## 1.0.1
 
 Added `DataFrame.tagCellWhen(...)` that tags a cell when the specified predicate is true.
