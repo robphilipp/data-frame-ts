@@ -1360,7 +1360,7 @@ export class DataFrame<V> {
         for(let row = 0; row < this.numRows; row++) {
             for(let column = 0; column < this.numColumns; column++) {
                 if(predicate(this.data[row * this.numColumns + column], row, column)) {
-                    tags = tags.addOrReplace(newCellTag(`${name}(${row},${column})`, tag, CellCoordinate.of(row, column)))
+                    tags = tags.addOrReplace(newCellTag(name, tag, CellCoordinate.of(row, column)))
                 }
             }
         }
