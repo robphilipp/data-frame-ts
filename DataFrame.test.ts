@@ -1002,6 +1002,67 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.hasRowTagFor(0)).toBe(true)
         })
 
+        describe("Conditionally adding tags", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+
+            test("should be able to add tags for even values", () => {
+                const taggedDataFrame = dataFrame
+                    .tagCellWhen(value => value % 2 === 0, "conditional-tag", "even-numbers")
+                    .getOrThrow()
+
+                expect(taggedDataFrame).toBeDefined()
+                expect(taggedDataFrame.rowCount()).toBe(4)
+                expect(taggedDataFrame.columnCount()).toBe(3)
+                // even numbers are tagged
+                expect(taggedDataFrame.cellTagsFor(0, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 2)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(2, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(3, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(3, 2)).toHaveLength(1)
+                // odd numbers are not tagged
+                expect(taggedDataFrame.cellTagsFor(0, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(0, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 1)).toHaveLength(0)
+            })
+
+            test("should be able to tag all the diagonal elements", () => {
+                const taggedDataFrame = dataFrame
+                    .tagCellWhen(
+                        (value, rowIndex, columnIndex) => rowIndex === columnIndex,
+                        "conditional-tag",
+                        "diagonal-elements"
+                    )
+                    .getOrThrow()
+
+                expect(taggedDataFrame).toBeDefined()
+                expect(taggedDataFrame.rowCount()).toBe(4)
+                expect(taggedDataFrame.columnCount()).toBe(3)
+                // diagonal elements are tagged
+                expect(taggedDataFrame.cellTagsFor(0, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(2, 2)).toHaveLength(1)
+
+                expect(taggedDataFrame.cellTagsFor(0, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(0, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 2)).toHaveLength(0)
+            })
+        })
+
         describe("Removing tags", () => {
             test("should be able to remove a row tag", () => {
                 const dataFrame = DataFrame
