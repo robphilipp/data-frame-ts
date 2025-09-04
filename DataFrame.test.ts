@@ -1002,6 +1002,67 @@ describe("Testing data-frame behavior", () => {
             expect(taggedDataFrame.hasRowTagFor(0)).toBe(true)
         })
 
+        describe("Conditionally adding tags", () => {
+            const dataFrame = DataFrame.from([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12]
+            ]).getOrThrow()
+
+            test("should be able to add tags for even values", () => {
+                const taggedDataFrame = dataFrame
+                    .tagCellWhen(value => value % 2 === 0, "conditional-tag", "even-numbers")
+                    .getOrThrow()
+
+                expect(taggedDataFrame).toBeDefined()
+                expect(taggedDataFrame.rowCount()).toBe(4)
+                expect(taggedDataFrame.columnCount()).toBe(3)
+                // even numbers are tagged
+                expect(taggedDataFrame.cellTagsFor(0, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 2)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(2, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(3, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(3, 2)).toHaveLength(1)
+                // odd numbers are not tagged
+                expect(taggedDataFrame.cellTagsFor(0, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(0, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 1)).toHaveLength(0)
+            })
+
+            test("should be able to tag all the diagonal elements", () => {
+                const taggedDataFrame = dataFrame
+                    .tagCellWhen(
+                        (value, rowIndex, columnIndex) => rowIndex === columnIndex,
+                        "conditional-tag",
+                        "diagonal-elements"
+                    )
+                    .getOrThrow()
+
+                expect(taggedDataFrame).toBeDefined()
+                expect(taggedDataFrame.rowCount()).toBe(4)
+                expect(taggedDataFrame.columnCount()).toBe(3)
+                // diagonal elements are tagged
+                expect(taggedDataFrame.cellTagsFor(0, 0)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(1, 1)).toHaveLength(1)
+                expect(taggedDataFrame.cellTagsFor(2, 2)).toHaveLength(1)
+
+                expect(taggedDataFrame.cellTagsFor(0, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(0, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(1, 2)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(2, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 0)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 1)).toHaveLength(0)
+                expect(taggedDataFrame.cellTagsFor(3, 2)).toHaveLength(0)
+            })
+        })
+
         describe("Removing tags", () => {
             test("should be able to remove a row tag", () => {
                 const dataFrame = DataFrame
@@ -1350,4 +1411,34 @@ describe("Testing data-frame behavior", () => {
             expect(isCellTag(cellTags[0])).toBeTruthy()
         })
     })
+
+    // describe("Performance Tests", () => {
+    //
+    //     const ROWS = 1000
+    //     const COLUMNS = 10000
+    //     const monsterData = Array(ROWS)
+    //         .fill(0)
+    //         .map((_, i) => Array(COLUMNS)
+    //             .fill(0)
+    //             .map((_, j) => i * ROWS + j)
+    //         )
+    //
+    //     const monsterDf = DataFrame.from(monsterData).getOrThrow()
+    //
+    //     test("should be able to create a large data frame", () => {
+    //         const df = DataFrame.from(monsterData).getOrThrow()
+    //         expect(df.rowCount()).toBe(ROWS)
+    //         expect(df.columnCount()).toBe(COLUMNS)
+    //     })
+    //
+    //     test("should be able to transpose a large data frame", () => {
+    //         const transposed = monsterDf.transpose()
+    //         expect(transposed.rowCount()).toBe(COLUMNS)
+    //         expect(transposed.columnCount()).toBe(ROWS)
+    //
+    //         const untransposed = transposed.transpose()
+    //         expect(untransposed.rowCount()).toBe(ROWS)
+    //         expect(untransposed.columnCount()).toBe(COLUMNS)
+    //     })
+    // })
 })

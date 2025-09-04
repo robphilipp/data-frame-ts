@@ -125,8 +125,11 @@ export class DataFrame<V> {
             return successResult(new DataFrame<V>([], 0, 0, Tags.empty()))
         }
         return validateDimensions(data, rowForm)
-            .map(data => new DataFrame<V>(data.flatMap(row => row), data.length, data[0].length, Tags.empty()))
+            .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
             .map(df => rowForm ? df : df.transpose())
+        // return validateDimensions(data, rowForm)
+        //     .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
+        //     .map(df => rowForm ? df : df.transpose())
     }
 
     /**
@@ -738,7 +741,7 @@ export class DataFrame<V> {
         rows.forEach((row: Array<V>, rowIndex) => row.splice(columnIndex, 0, column[rowIndex]))
 
         const tags = this.tags.insertColumn(columnIndex)
-        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns + 1, tags))
+        return successResult(new DataFrame(rows.flat(), this.numRows, this.numColumns + 1, tags))
     }
 
     /**
@@ -889,7 +892,7 @@ export class DataFrame<V> {
         rows.forEach((row: Array<V>) => row.splice(columnIndex, 1))
 
         const tags = this.tags.removeColumn(columnIndex)
-        return successResult(new DataFrame(rows.flatMap(row => row), this.numRows, this.numColumns - 1, tags))
+        return successResult(new DataFrame(rows.flat(), this.numRows, this.numColumns - 1, tags))
     }
 
     /**
@@ -1318,6 +1321,57 @@ export class DataFrame<V> {
     }
 
     /**
+     * Tags all the elements in the DataFrame that meet the specified predicate.
+     *
+     * @param predicate A function that accepts the elements value and it coordinates and returns `true` if the
+     * element should be tagged, or `false` otherwise.
+     * @param name The name of the tag to associate with the tagged elements.
+     * @param tag The value of the tag to associate with the tagged elements.
+     * @param [modifyInPlace = default] When set to `true`, then modifies the original data-frame in-place; when
+     * set to `false` (default behavior) does not modify the original data-frame, but rather returns a new
+     * data-frame object with the added tag
+     * @template T The type of the tag value, which must extend TagValue.
+     * @return A success result containing the updated DataFrame if the predicate is valid,
+     * or a failure result containing an error message if the predicate is invalid.
+     * @see tagRow
+     * @see tagColumn
+     * @see tagCell
+     * @example
+     * ```typescript
+     * const taggedDataFrame = DataFrame.from([
+     *       [1, 2, 3],
+     *       [4, 5, 6],
+     *       [7, 8, 9]
+     *   ])
+     *
+     * // tag all the elements in the DataFrame that have a value that is even
+     * const taggedDataFrame = dataFrame
+     *     .tagCellWhen(value => value % 2 === 0, "conditional-tag", "even-numbers")
+     *     .getOrThrow()
+     * ```     `
+     */
+    public tagCellWhen<T extends TagValue>(
+        predicate: (value: V, rowIndex: number, columnIndex: number) => boolean,
+        name: string,
+        tag: T,
+        modifyInPlace:  boolean = false
+    ): Result<DataFrame<V>, string> {
+        let tags: Tags<TagValue, TagCoordinate> = this.tags
+        for(let row = 0; row < this.numRows; row++) {
+            for(let column = 0; column < this.numColumns; column++) {
+                if(predicate(this.data[row * this.numColumns + column], row, column)) {
+                    tags = tags.addOrReplace(newCellTag(`${name}(${row},${column})`, tag, CellCoordinate.of(row, column)))
+                }
+            }
+        }
+        if(modifyInPlace) {
+            this.tags = tags
+            return successResult(this)
+        }
+        return successResult(new DataFrame<V>(this.data.slice(), this.numRows, this.numColumns, tags))
+    }
+
+    /**
      * Updates the tags in the current DataFrame either in place or by creating a new DataFrame.
      *
      * @param modifyInPlace - Determines whether the tags should be modified in place.
@@ -1619,52 +1673,7 @@ export class DataFrame<V> {
                 )
         }
         return successResult([])
-        // return failureResult(
-        //     `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
-        //     `tag: ${tag.toString()}`
-        // )
     }
-
-    // public cellsTaggedWith(tag: Tag<TagValue, TagCoordinate>): Result<Array<CellValue<V>>, string> {
-    //     const [row, column] = tag.coordinate.coordinate()
-    //     if (isRowTag(tag)) {
-    //         if (this.rowTagsFor(row).some(tg => tg.equals(tag))) {
-    //             return this.rowSlice(row)
-    //                 .map(values => values
-    //                     .map((value, index) => ({value, row, column: index} as CellValue<V>))
-    //                 )
-    //         }
-    //         return successResult([])
-    //     }
-    //     if (isColumnTag(tag)) {
-    //         if (this.columnTagsFor(column).some(tg => tg.equals(tag))) {
-    //             return this.columnSlice(column)
-    //                 .map(values => values
-    //                     .map((value, index) => ({value, row: index, column} as CellValue<V>))
-    //                 )
-    //         }
-    //         return successResult([])
-    //     }
-    //     if (isCellTag(tag)) {
-    //         if (this.cellTagsFor(row, column).some(tg => tg.equals(tag))) {
-    //             return this.elementAt(row, column).map(value => [value])
-    //                 .map(values => values
-    //                     .map(value => ({value, row, column} as CellValue<V>))
-    //                 )
-    //         }
-    //         return successResult([])
-    //     }
-    //     if (this.tagsFor(row, column).some(tg => tg.equals(tag))) {
-    //         return this.elementAt(row, column).map(value => [value])
-    //             .map(values => values
-    //                 .map(value => ({value, row, column} as CellValue<V>))
-    //             )
-    //     }
-    //     return failureResult(
-    //         `(DataFrame::cellsTaggedWith) Invalid tag type. Tag must be a RowTag, ColumnTag, or CellTag` +
-    //         `tag: ${tag.toString()}`
-    //     )
-    // }
 
     /**
      * Retrieves all the {@link RowTag} objects associated with the specified row index
