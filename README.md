@@ -396,15 +396,20 @@ dataFrame.tagColumn(1, "dataType", "numeric").getOrThrow();
 // Tag a cell
 dataFrame.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}).getOrThrow();
 
+// Conditionally tag cells with even number values using a predicate
+const taggedDataFrame = dataFrame
+    .tagCellWhen((value) => value % 2 === 0, "conditional-tag", "even-numbers")
+    .getOrThrow()
 
 // Chain multiple tag operations
 const taggedDataFrame = dataFrame.tagRow(0, "category", "header")
-        .flatMap(df => df.tagColumn(1, "dataType", "numeric"))
-        // modify the data-frame in place by setting the "modifyInPlace argument to "true"
-        .flatMap(df => df.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}, true))
-        .getOrThrow()
+    .flatMap(df => df.tagColumn(1, "dataType", "numeric"))
+    // modify the data-frame in place by setting the "modifyInPlace argument to "true"
+    .flatMap(df => df.tagCell(1, 2, "highlight", {color: "orange", opacity: 0.3}, true))
+    .getOrThrow()
 
 // taggedDataFrame and the original dataFrame are the same object
+
 ```
 
 #### Removing Tags
@@ -641,6 +646,7 @@ const dataFrame = DataFrame
 - `tagRow<T extends TagValue>(rowIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific row with a name-value pair
 - `tagColumn<T extends TagValue>(columnIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific column with a name-value pair
 - `tagCell<T extends TagValue>(rowIndex: number, columnIndex: number, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags a specific cell with a name-value pair
+- `tagCellWhen<T extends TagValue>(predicate: (value: V, rowIndex: number, columnIndex: number) => boolean, name: string, tag: T, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Tags all cells for which the predicate returns true
 - `removeRowTag(rowIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific row
 - `removeColumnTag(columnIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific column
 - `removeCellTag(rowIndex: number, columnIndex: number, name: string, modifyInPlace: boolean = false): Result<DataFrame<V>, string>` - Removes a tag from a specific cell
