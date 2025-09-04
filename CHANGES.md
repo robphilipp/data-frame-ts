@@ -1,5 +1,9 @@
 # changelog
 
+## 1.0.1
+
+Added `DataFrame.tagCellWhen(...)` that tags a cell when the specified predicate is true.
+
 ## 1.0.0
 
 Previously the `DataFrame.empty()` function returned an empty `DataFrame` object wrapped in a [`Result`](https://www.npmjs.com/package/result-fn). The issue is that `DataFrame.empty()` will not fail and wrapping it in a `Result` is incorrect semantically, and makes creating an empty `DataFrame` cumbersome. 
