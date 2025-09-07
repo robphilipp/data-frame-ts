@@ -1,5 +1,9 @@
 # changelog
 
+## 1.0.3
+
+Added exports to index.ts.
+
 ## 1.0.2
 
 Fixed the name set for the conditional cell-tag so that it is what was specified.
