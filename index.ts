@@ -1,15 +1,20 @@
 export {
     DataFrame,
-    CellValue
+    CellValue,
+    Index,
+    indexFrom
 } from './DataFrame';
 export type {
     TagCoordinate,
     Tag,
     RowTag, ColumnTag, CellTag,
-    TagValue
+    TagValue,
+    AvailableTagTypes
 } from './tags'
 export {
     RowCoordinate, ColumnCoordinate, CellCoordinate,
     Tags,
-    newTag, newRowTag, newColumnTag, newCellTag
+    newTag, newRowTag, newColumnTag, newCellTag,
+    tagIdFor,
+    isRowTag, isColumnTag, isCellTag
 } from './tags'
