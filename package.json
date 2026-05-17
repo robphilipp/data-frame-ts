@@ -1,6 +1,6 @@
 {
   "name": "data-frame-ts",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "typescript DataFrame",
   "author": "Rob Philipp",
   "homepage": "https://github.com/robphilipp/data-frame-ts",
@@ -25,12 +25,10 @@
       "last 1 safari version"
     ]
   },
-  "dependencies": {
-    "result-fn": "^0.2.1"
-  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
+    "result-fn": "^0.5.2",
     "ts-jest": "^29.3.4",
     "typescript": "^5.8.3"
   }

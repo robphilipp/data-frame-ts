@@ -1,5 +1,9 @@
 # changelog
 
+## 1.0.4
+
+Removed `result-fn` from the dependencies and placed it in devDependencies to avoid version conflicts.
+
 ## 1.0.3
 
 Added exports to index.ts.
