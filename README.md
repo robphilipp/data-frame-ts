@@ -83,6 +83,12 @@ const result2 = DataFrame.fromColumnData([
   [2, 5, 8],  // second column
   [3, 6, 9]   // third column
 ])
+
+// You can also create a `DataFrame` of specified dimensions by handing the `fromProvider` function a 
+// callback function that accepts the row and column index and returns a value for that index. For example
+// to create a `DataFrame` of 4 rows and 3 columns where each cell is the product of its row-index times 10
+// plus the column index.
+const result3 = DataFrame.fromProvider(4, 3, (row, col) => row * 10 + col)
 ```
 
 The first function, `from(...)` accepts an array of rows, where each row is represented by an array of values of type `V`. The second function, `fromColumnData(...)` accepts an array of columns, where each column is represented by an array of values of the type, you guessed it, `V`. In both cases, the `DataFrame` converts the data to its internal representation, and all methods behave identically, regardless of the factory function used to instantiate the `DataFrame` object.

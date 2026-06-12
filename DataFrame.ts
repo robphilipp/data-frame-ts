@@ -127,9 +127,6 @@ export class DataFrame<V> {
         return validateDimensions(data, rowForm)
             .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
             .map(df => rowForm ? df : df.transpose())
-        // return validateDimensions(data, rowForm)
-        //     .map(data => new DataFrame<V>(data.flat(), data.length, data[0].length, Tags.empty()))
-        //     .map(df => rowForm ? df : df.transpose())
     }
 
     /**
@@ -173,6 +170,43 @@ export class DataFrame<V> {
      */
     static empty<V>(): DataFrame<V> {
         return DataFrame.from<V>([], false).getOrThrow()
+    }
+
+    /**
+     * Creates a DataFrame with the specified dimensions using the specified provider to set the
+     * values of each cell. The provider callback-function is called for each cell to be created
+     * for the data frame that will have the specified number of rows and columns.
+     * @param numRows The row-dimension of the data frame
+     * @param numColumns The column-dimension of the data frame
+     * @param provider A function that returns the value of a cell given its row and column index
+     * @template T the element type
+     * @return The newly created data frame
+     * @example
+     * ```typescript
+     * const dataFrame = DataFrame.fill(4, 3, (row, col) => row * 10 + col)
+     * expect(dataFrame.rowCount()).toEqual(4)
+     * expect(dataFrame.columnCount()).toEqual(3)
+     * expect(dataFrame.elementAt(0, 0).getOrThrow()).toEqual(0)
+     * expect(dataFrame.elementAt(0, 1).getOrThrow()).toEqual(1)
+     * expect(dataFrame.elementAt(0, 2).getOrThrow()).toEqual(2)
+     * expect(dataFrame.elementAt(1, 0).getOrThrow()).toEqual(10)
+     * expect(dataFrame.elementAt(1, 1).getOrThrow()).toEqual(11)
+     * expect(dataFrame.elementAt(1, 2).getOrThrow()).toEqual(12)
+     * ```
+     */
+    static fromProvider<V>(numRows: number, numColumns: number, provider: (rowIndex: number, columnIndex: number) => V): Result<DataFrame<V>, string> {
+        if (numRows <= 0 || numColumns <= 0) {
+            return Result.failure(`Invalid dimensions: ${numRows} rows; ${numColumns} columns`)
+        }
+        const rows: Array<Array<V>> = []
+        for (let rowIndex = 0; rowIndex < numRows; ++rowIndex) {
+            let column: Array<V> = []
+            for (let colIndex = 0; colIndex < numColumns; ++colIndex) {
+                column.push(provider(rowIndex, colIndex))
+            }
+            rows.push(column)
+        }
+        return DataFrame.from(rows)
     }
 
     /**
