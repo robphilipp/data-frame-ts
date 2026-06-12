@@ -1,5 +1,9 @@
 # changelog
 
+## 1.1.0
+
+1. Added a `fromProvider` function to create a `DataFrame` of specified dimensions (row, column) using a provider callback function that provides are value for each cell in the new `DataFrame`.
+
 ## 1.0.4
 
 Removed `result-fn` from the dependencies and placed it in devDependencies to avoid version conflicts.
