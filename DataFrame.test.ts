@@ -99,6 +99,25 @@ describe("Testing data-frame behavior", () => {
             expect(transposed.elementAt(1, 0).getOrThrow()).toEqual("2")
             expect(typeof transposed.elementAt(1, 0).getOrThrow()).toEqual("string")
         })
+
+        it("should be able to create a data frame using the fill function", () => {
+            const dataFrame = DataFrame
+                .fromProvider(4, 3, (row, col) => row * 10 + col)
+                .getOrThrow()
+            expect(dataFrame.rowCount()).toEqual(4)
+            expect(dataFrame.columnCount()).toEqual(3)
+            expect(dataFrame.elementAt(0, 0).getOrThrow()).toEqual(0)
+            expect(dataFrame.elementAt(0, 1).getOrThrow()).toEqual(1)
+            expect(dataFrame.elementAt(0, 2).getOrThrow()).toEqual(2)
+            expect(dataFrame.elementAt(1, 0).getOrThrow()).toEqual(10)
+            expect(dataFrame.elementAt(1, 1).getOrThrow()).toEqual(11)
+            expect(dataFrame.elementAt(1, 2).getOrThrow()).toEqual(12)
+        })
+
+        it("should not be able to create a data-frame with invalid dimensions", () => {
+            expect(DataFrame.fromProvider(0, 3, (row, col) => row * 10 + col).succeeded).toBe(false)
+            expect(DataFrame.fromProvider(4, 0, (row, col) => row * 10 + col).succeeded).toBe(false)
+        })
     })
 
     describe("Testing data-frame equality", () => {
